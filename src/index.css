@@ -18,17 +18,23 @@
   --color-text-dark: #e2e8f0;
   --color-primary: #0ea5e9;
   --color-secondary: #475569;
-  --color-accent: #facc15;
+  --color-accent: #ca8a04;
+  --color-accent-hover: #a16207;
+}
+
+:root {
+  --color-text: var(--color-text);
+  --color-background: var(--color-background);
+}
+
+.dark {
+  --color-text: var(--color-text-dark);
+  --color-background: var(--color-background-dark);
 }
 
 .light {
   --color-text: var(--color-text);
   --color-background: var(--color-background);
-}
-
-:root {
-  --color-text: var(--color-text-dark);
-  --color-background: var(--color-background-dark);
 }
 
 body {

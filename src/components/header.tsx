@@ -1,5 +1,5 @@
 // import { NavLink } from "react-router-dom";
-import { Search } from "lucide-react";
+import { Search, Sun, Moon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   NavigationMenu,
@@ -9,23 +9,26 @@ import {
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
 import { Link } from "react-router-dom";
+import { useTheme } from "@/components/theme-provider";
+import { Button } from "./ui/button";
 
 export function Header() {
-  // const { setTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
 
   return (
     <NavigationMenu className="w-full max-w-none h-fit">
-      <NavigationMenuList className="w-full flex relative gap-x-100">
-        <NavigationMenuItem>
-          <h1>Mneme World Generator</h1>
-        </NavigationMenuItem>
-        <div className="flex-1 flex items-center justify-center">
+      <div className="flex items-center justify-between w-full px-4">
+        {/* Left: Title at edge */}
+        <h1 className="font-semibold">Mneme World Generator</h1>
+
+        {/* Center: Nav links */}
+        <NavigationMenuList className="flex items-center gap-6">
           <NavigationMenuItem>
             <NavigationMenuLink
               asChild
               className={navigationMenuTriggerStyle()}
             >
-              <Link to="/home">Home</Link>
+              <Link to="/">Home</Link>
             </NavigationMenuLink>
           </NavigationMenuItem>
           <NavigationMenuItem>
@@ -33,7 +36,7 @@ export function Header() {
               asChild
               className={navigationMenuTriggerStyle()}
             >
-              <Link to="/">Create New</Link>
+              <Link to="/create-new">Create New</Link>
             </NavigationMenuLink>
           </NavigationMenuItem>
           <NavigationMenuItem>
@@ -44,18 +47,32 @@ export function Header() {
               <Link to="/my-worlds">My Worlds</Link>
             </NavigationMenuLink>
           </NavigationMenuItem>
-        </div>
-        <NavigationMenuItem>
+        </NavigationMenuList>
+
+        {/* Right: Search + Theme Toggle */}
+        <div className="flex items-center gap-4">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search..."
               type="text"
               className="w-96 pl-10 rounded-xl"
             />
           </div>
-        </NavigationMenuItem>
-      </NavigationMenuList>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Toggle Theme"
+            onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+          >
+            {theme === "light" ? (
+              <Sun className="h-4 w-4" />
+            ) : (
+              <Moon className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
+      </div>
     </NavigationMenu>
   );
 }
