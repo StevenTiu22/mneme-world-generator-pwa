@@ -10,18 +10,15 @@ import {
 } from "@/components/ui/navigation-menu";
 import { Link } from "react-router-dom";
 import { useTheme } from "@/components/theme-provider";
-import { Button } from "./ui/button";
+import { Button } from "../ui/button";
 
 export function Header() {
   const { theme, setTheme } = useTheme();
 
   return (
-    <NavigationMenu className="w-full max-w-none h-fit">
+    <NavigationMenu className="w-full max-w-none h-fit sticky">
       <div className="flex items-center justify-between w-full px-4">
-        {/* Left: Title at edge */}
         <h1 className="font-semibold">Mneme World Generator</h1>
-
-        {/* Center: Nav links */}
         <NavigationMenuList className="flex items-center gap-6">
           <NavigationMenuItem>
             <NavigationMenuLink
@@ -49,7 +46,6 @@ export function Header() {
           </NavigationMenuItem>
         </NavigationMenuList>
 
-        {/* Right: Search + Theme Toggle */}
         <div className="flex items-center gap-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
