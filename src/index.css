@@ -2,41 +2,77 @@
 @import "@fontsource/inter";
 @import "@fontsource/ibm-plex-mono";
 
-@theme {
-  --font-inter: "Inter", sans-serif;
-  --font-ibmplexmono: "IBM Plex Mono", monospace;
-  --font-weight-light: 300;
-  --font-weight-regular: 400;
-  --font-weight-medium: 500;
-  --font-weight-semibold: 600;
-  --font-weight-bold: 700;
-  --font-weight-extrabold: 800;
+@layer base {
+  :root {
+    --background: 240 10% 97%; /* Your #f8fafc */
+    --foreground: 222 47% 11%; /* Your #0f172a */
 
-  --color-background: #f8fafc;
-  --color-background-dark: #0f172a;
-  --color-text: #0f172a;
-  --color-text-dark: #e2e8f0;
-  --color-primary: #0ea5e9;
-  --color-secondary: #475569;
-  --color-accent: #ca8a04;
-  --color-accent-hover: #a16207;
+    --card: 240 10% 97%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 240 10% 97%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 199 90% 52%; /* Your #0ea5e9 */
+    --primary-foreground: 210 40% 98%; /* Text on primary color */
+
+    --secondary: 220 13% 35%; /* Your #475569 */
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 45 93% 48%; /* Your #ca8a04 */
+    --accent-foreground: 222 47% 11%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 199 90% 52%; /* Your primary color for focus rings */
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 222 47% 11%; /* Your #0f172a */
+    --foreground: 210 40% 93%; /* Your #e2e8f0 */
+
+    --card: 222 47% 11%;
+    --card-foreground: 210 40% 93%;
+
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 40% 93%;
+
+    --primary: 199 90% 52%; /* Your #0ea5e9 */
+    --primary-foreground: 222 47% 11%;
+
+    --secondary: 217 33% 50%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 45 93% 48%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 199 90% 52%;
+  }
 }
 
-:root {
-  --color-text: var(--color-text);
-  --color-background: var(--color-background);
-}
-
-.dark {
-  --color-text: var(--color-text-dark);
-  --color-background: var(--color-background-dark);
-}
-
-.light {
-  --color-text: var(--color-text);
-  --color-background: var(--color-background);
-}
-
-body {
-  @apply bg-background text-text;
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+  }
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: var(--font-inter), sans-serif;
+  }
 }
