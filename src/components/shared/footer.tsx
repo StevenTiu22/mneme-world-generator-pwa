@@ -7,7 +7,7 @@ export function Footer() {
       <div className="container mx-auto text-center space-y-2">
         <p className="text-sm">Owned by Justin Cesar Aquino</p>
         <Link
-          to=""
+          to="https://discord.com/users/justinaquino"
           className="gap-4 inline-flex items-center text-sm font-medium text-foreground transition-colors hover:text-primary dark:hover:text-primary"
         >
           <FaDiscord className="h-4 w-4" />
