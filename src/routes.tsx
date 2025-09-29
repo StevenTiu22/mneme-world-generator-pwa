@@ -10,6 +10,10 @@ export default function AppRoutes() {
     <Routes>
       <Route element={<MainLayout />}>
         <Route path="/" element={<Home />} />
+        <Route
+          path="/my-worlds"
+          element={<div>My Worlds Page (Coming Soon)</div>}
+        />
       </Route>
       <Route>
         <Route element={<CenteredLayout />}>
