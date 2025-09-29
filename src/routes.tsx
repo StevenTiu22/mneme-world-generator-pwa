@@ -21,8 +21,6 @@ export default function AppRoutes() {
           <Route path="/create-new/custom" element={<CreatePrimaryStar />} />
         </Route>
       </Route>
-      {/* <Route path="/about" element={<About />} /> */}
-      {/* <Route path="/contact" element={<Contact />} /> */}
     </Routes>
   );
 }
