@@ -15,11 +15,9 @@ export default function AppRoutes() {
           element={<div>My Worlds Page (Coming Soon)</div>}
         />
       </Route>
-      <Route>
-        <Route element={<CenteredLayout />}>
-          <Route path="/create-new" element={<CreateNewPage />} />
-          <Route path="/create-new/custom" element={<CreatePrimaryStar />} />
-        </Route>
+      <Route path="/create-new" element={<CenteredLayout />}>
+        <Route index element={<CreateNewPage />} />
+        <Route path="primary-star" element={<CreatePrimaryStar />} />
       </Route>
     </Routes>
   );

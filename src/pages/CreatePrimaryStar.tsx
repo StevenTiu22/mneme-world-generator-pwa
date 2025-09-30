@@ -1,9 +1,9 @@
 import { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Pencil, Minus, Plus } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Pencil, Minus, Plus, Check, X } from "lucide-react";
 
 // --- Data and Types (No changes needed here) ---
 const STAR_CLASSES = ["O", "B", "A", "F", "G", "K", "M"] as const;
@@ -25,8 +25,9 @@ const STAR_DATA_MAP: Record<StarClass, StarData> = {
 
 // --- Component ---
 export function CreatePrimaryStar() {
-  const navigate = useNavigate();
   const [starName, setStarName] = useState("Primary Star #1");
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [tempName, setTempName] = useState(starName);
   const [selectedClass, setSelectedClass] = useState<StarClass>("O");
   const [classGrade, setClassGrade] = useState(1);
 
@@ -40,6 +41,21 @@ export function CreatePrimaryStar() {
       STAR_CLASSES[Math.floor(Math.random() * STAR_CLASSES.length)];
     setSelectedClass(randomClass);
     setClassGrade(Math.floor(Math.random() * 10));
+  };
+
+  const handleSaveName = () => {
+    setStarName(tempName);
+    setIsEditingName(false);
+  };
+
+  const handleCancelEdit = () => {
+    setTempName(starName);
+    setIsEditingName(false);
+  };
+
+  const handleEditClick = () => {
+    setTempName(starName);
+    setIsEditingName(true);
   };
 
   // This component now grows to fill the space provided by the layout
@@ -58,8 +74,40 @@ export function CreatePrimaryStar() {
           {/* Left Column: Inputs */}
           <div className="lg:col-span-2 space-y-8">
             <div className="flex items-center gap-4">
-              <h2 className="text-2xl font-semibold">{starName}</h2>
-              <Pencil className="h-5 w-5 text-muted-foreground cursor-pointer" />
+              {isEditingName ? (
+                <>
+                  <Input
+                    value={tempName}
+                    onChange={(e) => setTempName(e.target.value)}
+                    className="text-2xl font-semibold h-12"
+                    autoFocus
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleSaveName}
+                    className="text-green-600 hover:text-green-700"
+                  >
+                    <Check className="h-5 w-5" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleCancelEdit}
+                    className="text-red-600 hover:text-red-700"
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <h2 className="text-2xl font-semibold">{starName}</h2>
+                  <Pencil
+                    className="h-5 w-5 text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
+                    onClick={handleEditClick}
+                  />
+                </>
+              )}
             </div>
             <div>
               <Label className="text-base">Star Class</Label>
@@ -72,7 +120,7 @@ export function CreatePrimaryStar() {
                         ? "secondary"
                         : "outline"
                     }
-                    className="h-20 text-xl"
+                    className="h-38 text-xl"
                     onClick={() =>
                       item === "Random"
                         ? handleRandom()
@@ -112,44 +160,44 @@ export function CreatePrimaryStar() {
             </div>
             <div>
               <Label className="text-base">Overview</Label>
-              <Card className="mt-2 p-6 space-y-6">
-                <div className="grid grid-cols-3 gap-4 text-center">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Color</p>
-                    <p className="text-xl font-bold">{overviewData.color}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Mass</p>
-                    <p className="text-xl font-bold">
-                      {overviewData.mass.toFixed(2)} M☉
+              <Card className="mt-2 p-8 h-[420px]">
+                <div className="grid grid-cols-2 gap-4 h-full">
+                  <div className="flex flex-col justify-between p-6 rounded-xl border-2 border-border bg-card hover:border-primary/50 transition-colors">
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+                      Color
+                    </p>
+                    <p className="text-3xl font-bold mt-auto">
+                      {overviewData.color}
                     </p>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Luminosity</p>
-                    <p className="text-xl font-bold">
-                      {overviewData.luminosity} L☉
+                  <div className="flex flex-col justify-between p-6 rounded-xl border-2 border-border bg-card hover:border-primary/50 transition-colors">
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+                      Mass
+                    </p>
+                    <p className="text-3xl font-bold mt-auto">
+                      {overviewData.mass.toFixed(2)}{" "}
+                      <span className="text-xl">M☉</span>
                     </p>
                   </div>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground text-center">
-                    Modifier
-                  </p>
-                  <p className="text-xl font-bold text-center mt-1">None</p>
+                  <div className="flex flex-col justify-between p-6 rounded-xl border-2 border-border bg-card hover:border-primary/50 transition-colors">
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+                      Luminosity
+                    </p>
+                    <p className="text-3xl font-bold mt-auto">
+                      {overviewData.luminosity}{" "}
+                      <span className="text-xl">L☉</span>
+                    </p>
+                  </div>
+                  <div className="flex flex-col justify-between p-6 rounded-xl border-2 border-border bg-card hover:border-primary/50 transition-colors">
+                    <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+                      Modifier
+                    </p>
+                    <p className="text-3xl font-bold mt-auto">None</p>
+                  </div>
                 </div>
               </Card>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* 3. Footer Section */}
-      <div>
-        <div className="flex justify-end gap-4">
-          <Button variant="outline" size="lg" onClick={() => navigate(-1)}>
-            Previous
-          </Button>
-          <Button size="lg">Next</Button>
         </div>
       </div>
     </div>
