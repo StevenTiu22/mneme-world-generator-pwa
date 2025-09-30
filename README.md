@@ -120,7 +120,7 @@ The application uses React Router DOM for navigation. Routes are defined in `src
 
 ## 👤 Author
 
-**Justine Cesar Aquino**
+**Justin Cesar Aquino**
 
 ## 📄 License
 
