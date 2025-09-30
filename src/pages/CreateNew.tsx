@@ -1,21 +1,40 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card"; // 1. Import Card components
-import { ShieldCheck } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { useNavigate, useOutletContext } from "react-router-dom";
+import { Card, CardContent } from "@/components/ui/card";
+import { Zap, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type CreationMode = "quick" | "custom";
 
+interface LayoutContext {
+  setNextDisabled: (disabled: boolean) => void;
+  setNextHandler: (handler: () => () => void) => void;
+}
+
 export function CreateNewPage() {
   const [selection, setSelection] = useState<CreationMode | null>(null);
   const navigate = useNavigate();
+  const context = useOutletContext<LayoutContext>();
 
-  const handleNext = () => {
-    if (selection) {
-      navigate(`/create-new/${selection}`);
+  // Create a stable handler reference that navigates based on selection
+  const handleNext = useCallback(() => {
+    if (selection === "custom") {
+      navigate("primary-star");
+    } else if (selection === "quick") {
+      navigate("quick");
     }
-  };
+  }, [selection, navigate]);
+
+  // Update Next button state based on selection
+  useEffect(() => {
+    if (context) {
+      // Enable/disable Next button
+      context.setNextDisabled(!selection);
+
+      // Set Next button handler - wrap in a function to avoid immediate execution
+      context.setNextHandler(() => handleNext);
+    }
+  }, [selection, handleNext, context]);
 
   return (
     <div className="w-full max-w-4xl animate-in fade-in duration-500">
@@ -27,23 +46,20 @@ export function CreateNewPage() {
         {/* Option 1: Quick Generate (using Card component) */}
         <Card
           role="button"
-          tabIndex={0}
           onClick={() => setSelection("quick")}
           onKeyDown={(e) => e.key === "Enter" && setSelection("quick")}
           className={cn(
-            "h-64 cursor-pointer transition-colors flex flex-col", // Use flexbox to position content
+            "h-64 cursor-pointer transition-colors flex flex-col items-center justify-center",
             selection === "quick" ? "border-primary" : "hover:border-slate-400"
           )}
         >
-          <CardHeader className="flex-row items-center justify-end p-4">
-            <ShieldCheck
+          <CardContent className="flex flex-col items-center justify-center gap-4 p-6">
+            <Zap
               className={cn(
-                "h-5 w-5",
+                "h-12 w-12",
                 selection === "quick" ? "text-primary" : "text-muted-foreground"
               )}
             />
-          </CardHeader>
-          <CardContent className="flex-grow flex items-end p-4">
             <h2 className="text-base font-medium">Quick Generate</h2>
           </CardContent>
         </Card>
@@ -51,31 +67,25 @@ export function CreateNewPage() {
         {/* Option 2: Create Customized World (using Card component) */}
         <Card
           role="button"
-          tabIndex={0}
           onClick={() => setSelection("custom")}
           onKeyDown={(e) => e.key === "Enter" && setSelection("custom")}
           className={cn(
-            "h-64 cursor-pointer transition-colors flex flex-col",
+            "h-64 cursor-pointer transition-colors flex flex-col items-center justify-center",
             selection === "custom" ? "border-primary" : "hover:border-slate-400"
           )}
         >
-          {/* This card has no icon, so the header is empty or omitted */}
-          <CardHeader className="p-4"></CardHeader>
-          <CardContent className="flex-grow flex items-end p-4">
+          <CardContent className="flex flex-col items-center justify-center gap-4 p-6">
+            <Settings
+              className={cn(
+                "h-12 w-12",
+                selection === "custom"
+                  ? "text-primary"
+                  : "text-muted-foreground"
+              )}
+            />
             <h2 className="text-base font-medium">Create Customized World</h2>
           </CardContent>
         </Card>
-      </div>
-
-      <div className="flex justify-end">
-        <Button
-          variant="outline"
-          size="lg"
-          disabled={!selection}
-          onClick={handleNext}
-        >
-          Next
-        </Button>
       </div>
     </div>
   );
