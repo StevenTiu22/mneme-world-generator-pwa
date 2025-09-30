@@ -29,6 +29,14 @@ export function CenteredLayout() {
       };
     }
 
+    if (path === "/create-new/companion-star") {
+      return {
+        showPrevious: true,
+        showNext: false,
+        previousPath: "/create-new/primary-star",
+      };
+    }
+
     return {
       showPrevious: false,
       showNext: false,

@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
+import { useNavigate, useOutletContext } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -23,8 +24,15 @@ const STAR_DATA_MAP: Record<StarClass, StarData> = {
   M: { color: "Red", mass: 0.3, luminosity: 0.04 },
 };
 
+interface LayoutContext {
+  setNextDisabled: (disabled: boolean) => void;
+  setNextHandler: (handler: () => () => void) => void;
+}
+
 // --- Component ---
 export function CreatePrimaryStar() {
+  const navigate = useNavigate();
+  const context = useOutletContext<LayoutContext>();
   const [starName, setStarName] = useState("Primary Star #1");
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempName, setTempName] = useState(starName);
@@ -57,6 +65,19 @@ export function CreatePrimaryStar() {
     setTempName(starName);
     setIsEditingName(true);
   };
+
+  // Handler for Next button to navigate to companion-star
+  const handleNext = useCallback(() => {
+    navigate("../companion-star");
+  }, [navigate]);
+
+  // Update Next button state - always enabled on this page
+  useEffect(() => {
+    if (context) {
+      context.setNextDisabled(false);
+      context.setNextHandler(() => handleNext);
+    }
+  }, [handleNext, context]);
 
   // This component now grows to fill the space provided by the layout
   return (
