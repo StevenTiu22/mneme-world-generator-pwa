@@ -1,69 +1,139 @@
-# React + TypeScript + Vite
+# Mneme World Generator
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A progressive web application for generating and managing fictional worlds, built with modern web technologies.
 
-Currently, two official plugins are available:
+## 🚀 Tech Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Frontend Framework**: React 19 with TypeScript
+- **Build Tool**: Vite 7
+- **UI Components**: [shadcn/ui](https://ui.shadcn.com/) with Radix UI primitives
+- **Styling**: Tailwind CSS v4 with custom theme tokens
+- **Routing**: React Router DOM v7
+- **Icons**: Lucide React
+- **Fonts**: Inter (sans-serif) & IBM Plex Mono (monospace)
 
-## Expanding the ESLint configuration
+## 📋 Prerequisites
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+Before you begin, ensure you have the following installed:
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+- **Node.js**: v18 or higher
+- **npm**: v9 or higher (comes with Node.js)
 
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
+## 🛠️ Getting Started
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/StevenTiu22/mneme-world-generator-pwa.git
+cd mneme-world-generator-pwa
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### 2. Install dependencies
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
 ```
+
+### 3. Run the development server
+
+```bash
+npm run dev
+```
+
+The application will be available at `http://localhost:5173`
+
+## 📦 Available Scripts
+
+- `npm run dev` - Start the development server with hot reload
+- `npm run build` - Build the production-ready application
+- `npm run preview` - Preview the production build locally
+- `npm run lint` - Run ESLint to check code quality
+
+## 🎨 Project Structure
+
+```
+mneme-world-generator-pwa/
+├── public/              # Static assets
+├── src/
+│   ├── assets/         # Images, logos, and media files
+│   ├── components/     # React components
+│   │   ├── layout/    # Layout components (MainLayout, CenteredLayout)
+│   │   ├── shared/    # Shared components (Header, Footer)
+│   │   └── ui/        # shadcn/ui components (Button, Card, etc.)
+│   ├── lib/           # Utility functions
+│   ├── pages/         # Page components (Home, CreateNew, etc.)
+│   ├── App.tsx        # Root application component
+│   ├── routes.tsx     # React Router configuration
+│   ├── main.tsx       # Application entry point
+│   └── index.css      # Global styles and Tailwind configuration
+├── components.json     # shadcn/ui configuration
+├── tailwind.config.js  # Tailwind CSS configuration
+└── vite.config.ts     # Vite configuration
+```
+
+## 🎯 Features
+
+- **World Generation**: Create custom worlds with detailed parameters
+- **Dark/Light Theme**: Toggle between dark and light modes with persistent preference
+- **Responsive Design**: Optimized for desktop and mobile devices
+- **Type-Safe**: Full TypeScript support for better developer experience
+- **Modern UI**: Beautiful, accessible components built with shadcn/ui
+
+## 🧩 Adding shadcn/ui Components
+
+To add new shadcn/ui components to the project:
+
+```bash
+npx shadcn@latest add [component-name]
+```
+
+Example:
+
+```bash
+npx shadcn@latest add dialog
+```
+
+## 🎨 Theme Customization
+
+The application uses CSS variables for theming. You can customize colors in `src/index.css`:
+
+- Light mode colors are defined in `:root`
+- Dark mode colors are defined in `.dark`
+- Theme tokens include: `background`, `foreground`, `primary`, `secondary`, `accent`, `muted`, etc.
+
+## 🌐 Routing
+
+The application uses React Router DOM for navigation. Routes are defined in `src/routes.tsx`:
+
+- `/` - Home page
+- `/create-new` - World creation selection
+- `/create-new/custom` - Custom world creation (Primary Star configuration)
+- `/my-worlds` - User's saved worlds (coming soon)
+
+## 📝 Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 👤 Author
+
+**Justine Cesar Aquino**
+
+## 📄 License
+
+This project is open source and available under the [MIT License](LICENSE).
+
+## 🔗 Links
+
+- [shadcn/ui Documentation](https://ui.shadcn.com/)
+- [React Documentation](https://react.dev/)
+- [Vite Documentation](https://vitejs.dev/)
+- [Tailwind CSS Documentation](https://tailwindcss.com/)
+- [React Router Documentation](https://reactrouter.com/)
+
+---
+
+Built with ❤️ using React, TypeScript, and Vite
