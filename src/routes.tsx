@@ -5,6 +5,7 @@ import { Home } from "./pages/Home";
 import { CreateNewPage } from "./pages/CreateNew";
 import { CreatePrimaryStar } from "./pages/CreatePrimaryStar";
 import { CreateCompanionStar } from "./pages/CreateCompanionStar";
+import { CreateMainWorld } from "./pages/CreateMainWorld";
 
 export default function AppRoutes() {
   return (
@@ -20,6 +21,7 @@ export default function AppRoutes() {
         <Route index element={<CreateNewPage />} />
         <Route path="primary-star" element={<CreatePrimaryStar />} />
         <Route path="companion-star" element={<CreateCompanionStar />} />
+        <Route path="main-world" element={<CreateMainWorld />} />
       </Route>
     </Routes>
   );
