@@ -13,34 +13,37 @@ export function CenteredLayout() {
   const getNavigationConfig = () => {
     const path = location.pathname;
 
-    if (path === "/create-new") {
-      return {
-        showPrevious: false,
-        showNext: true,
-        previousPath: "/",
-      };
+    switch (path) {
+      case "/create-new":
+        return {
+          showPrevious: false,
+          showNext: true,
+          previousPath: "/",
+        };
+      case "/create-new/primary-star":
+        return {
+          showPrevious: true,
+          showNext: true,
+          previousPath: "/create-new",
+        };
+      case "/create-new/companion-star":
+        return {
+          showPrevious: true,
+          showNext: true,
+          previousPath: "/create-new/primary-star",
+        };
+      case "/create-new/main-world":
+        return {
+          showPrevious: true,
+          showNext: true,
+          previousPath: "/create-new/companion-star",
+        };
+      default:
+        return {
+          showPrevious: false,
+          showNext: false,
+        };
     }
-
-    if (path === "/create-new/primary-star") {
-      return {
-        showPrevious: true,
-        showNext: true,
-        previousPath: "/create-new",
-      };
-    }
-
-    if (path === "/create-new/companion-star") {
-      return {
-        showPrevious: true,
-        showNext: false,
-        previousPath: "/create-new/primary-star",
-      };
-    }
-
-    return {
-      showPrevious: false,
-      showNext: false,
-    };
   };
 
   const navConfig = getNavigationConfig();

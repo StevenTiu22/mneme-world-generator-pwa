@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useNavigate, useOutletContext } from "react-router-dom";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,7 +28,14 @@ interface Companion {
   class: StarClass | null;
 }
 
+interface LayoutContext {
+  setNextDisabled: (disabled: boolean) => void;
+  setNextHandler: (handler: () => () => void) => void;
+}
+
 export function CreateCompanionStar() {
+  const navigate = useNavigate();
+  const context = useOutletContext<LayoutContext>();
   const [systemType, setSystemType] = useState("Binary");
   const [activeCompanion, setActiveCompanion] = useState<number | null>(null);
   const [companions, setCompanions] = useState<Companion[]>([]);
@@ -91,6 +99,19 @@ export function CreateCompanionStar() {
   const getActiveColor = () => {
     return activeCompanion !== null ? "bg-foreground" : "bg-accent";
   };
+
+  // Handler for Next button to navigate to main-world
+  const handleNext = useCallback(() => {
+    navigate("../main-world");
+  }, [navigate]);
+
+  // Update Next button state - always enabled on this page
+  useEffect(() => {
+    if (context) {
+      context.setNextDisabled(false);
+      context.setNextHandler(() => handleNext);
+    }
+  }, [handleNext, context]);
 
   return (
     <div className="container max-w-5xl mx-auto py-8">
