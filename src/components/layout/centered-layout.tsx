@@ -3,50 +3,63 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 
+// Better type for the context
+export interface CenteredLayoutContext {
+  setNextDisabled: (disabled: boolean) => void;
+  setNextHandler: (handler: () => void) => void;
+}
+
+// Navigation route configuration
+interface RouteConfig {
+  showPrevious: boolean;
+  showNext: boolean;
+  previousPath?: string;
+  nextPath?: string;
+}
+
+const ROUTE_CONFIG: Record<string, RouteConfig> = {
+  "/create-new": {
+    showPrevious: false,
+    showNext: true,
+    previousPath: "/",
+  },
+  "/create-new/primary-star": {
+    showPrevious: true,
+    showNext: true,
+    previousPath: "/create-new",
+  },
+  "/create-new/world-context": {
+    showPrevious: true,
+    showNext: true,
+    previousPath: "/create-new/primary-star",
+  },
+  "/create-new/companion-star": {
+    showPrevious: true,
+    showNext: true,
+    previousPath: "/create-new/world-context",
+  },
+  "/create-new/main-world": {
+    showPrevious: true,
+    showNext: true,
+    previousPath: "/create-new/companion-star",
+  },
+  "/create-new/habitability": {
+    showPrevious: true,
+    showNext: true,
+    previousPath: "/create-new/main-world",
+  },
+};
+
 export function CenteredLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [nextDisabled, setNextDisabled] = useState(true);
   const [nextHandler, setNextHandler] = useState<() => void>(() => () => {});
 
-  // Define navigation logic based on current route
-  const getNavigationConfig = () => {
-    const path = location.pathname;
-
-    switch (path) {
-      case "/create-new":
-        return {
-          showPrevious: false,
-          showNext: true,
-          previousPath: "/",
-        };
-      case "/create-new/primary-star":
-        return {
-          showPrevious: true,
-          showNext: true,
-          previousPath: "/create-new",
-        };
-      case "/create-new/companion-star":
-        return {
-          showPrevious: true,
-          showNext: true,
-          previousPath: "/create-new/primary-star",
-        };
-      case "/create-new/main-world":
-        return {
-          showPrevious: true,
-          showNext: true,
-          previousPath: "/create-new/companion-star",
-        };
-      default:
-        return {
-          showPrevious: false,
-          showNext: false,
-        };
-    }
+  const navConfig: RouteConfig = ROUTE_CONFIG[location.pathname] || {
+    showPrevious: false,
+    showNext: false,
   };
-
-  const navConfig = getNavigationConfig();
 
   const handlePrevious = () => {
     if (navConfig.previousPath) {
@@ -57,7 +70,9 @@ export function CenteredLayout() {
   };
 
   const handleNext = () => {
-    nextHandler();
+    if (nextHandler) {
+      nextHandler();
+    }
   };
 
   return (

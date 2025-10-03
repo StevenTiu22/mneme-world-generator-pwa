@@ -1,9 +1,19 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  AlertCircle,
+  Info,
+  Sparkles,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import {
   Select,
   SelectContent,
@@ -18,25 +28,80 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Slider } from "@/components/ui/slider";
 
-// Add TypeScript types
+// TypeScript types
 type StarClass = "O" | "B" | "A" | "F" | "G" | "K" | "M" | "Random";
+type LuminosityClass =
+  | "I"
+  | "II"
+  | "III"
+  | "IV"
+  | "V"
+  | "VI"
+  | "VII"
+  | "Random";
+type SystemType = "Binary" | "Trinary" | "Quaternary";
 
 interface Companion {
   id: number;
   name: string;
   class: StarClass | null;
+  luminosity: LuminosityClass;
+  orbitalDistance: number;
+  mass: number | null;
+  age: number | null;
 }
 
 interface LayoutContext {
   setNextDisabled: (disabled: boolean) => void;
-  setNextHandler: (handler: () => () => void) => void;
+  setNextHandler: (handler: () => void) => void;
 }
+
+// Star class info for better UX
+const STAR_CLASS_INFO: Record<
+  Exclude<StarClass, "Random">,
+  { color: string; temp: string }
+> = {
+  O: { color: "Blue", temp: "≥30,000 K" },
+  B: { color: "Blue-White", temp: "10,000-30,000 K" },
+  A: { color: "White", temp: "7,500-10,000 K" },
+  F: { color: "Yellow-White", temp: "6,000-7,500 K" },
+  G: { color: "Yellow", temp: "5,200-6,000 K" },
+  K: { color: "Orange", temp: "3,700-5,200 K" },
+  M: { color: "Red", temp: "2,400-3,700 K" },
+};
+
+// Helper function to get max companions based on system type
+const getMaxCompanions = (systemType: SystemType): number => {
+  switch (systemType) {
+    case "Binary":
+      return 1;
+    case "Trinary":
+      return 2;
+    case "Quaternary":
+      return 3;
+    default:
+      return 1;
+  }
+};
+
+// Helper to check if companion is fully configured
+const isCompanionComplete = (companion: Companion): boolean => {
+  return companion.class !== null;
+};
 
 export function CreateCompanionStar() {
   const navigate = useNavigate();
   const context = useOutletContext<LayoutContext>();
-  const [systemType, setSystemType] = useState("Binary");
+  const [systemType, setSystemType] = useState<SystemType>("Binary");
   const [activeCompanion, setActiveCompanion] = useState<number | null>(null);
   const [companions, setCompanions] = useState<Companion[]>([]);
   const [isRenameOpen, setIsRenameOpen] = useState(false);
@@ -52,6 +117,22 @@ export function CreateCompanionStar() {
     "M",
     "Random",
   ];
+  const maxCompanions = getMaxCompanions(systemType);
+
+  // Handle system type change - adjust companion count if needed
+  const handleSystemTypeChange = (newType: SystemType) => {
+    const newMax = getMaxCompanions(newType);
+    setSystemType(newType);
+
+    // Remove excess companions if switching to a smaller system
+    if (companions.length > newMax) {
+      const trimmed = companions.slice(0, newMax);
+      setCompanions(trimmed);
+      if (activeCompanion !== null && activeCompanion >= newMax) {
+        setActiveCompanion(newMax - 1);
+      }
+    }
+  };
 
   const handleClassSelect = (starClass: StarClass) => {
     if (activeCompanion === null) return;
@@ -60,11 +141,45 @@ export function CreateCompanionStar() {
     setCompanions(updated);
   };
 
+  const handleLuminosityChange = (luminosity: LuminosityClass) => {
+    if (activeCompanion === null) return;
+    const updated = [...companions];
+    updated[activeCompanion].luminosity = luminosity;
+    setCompanions(updated);
+  };
+
+  const handleOrbitalDistanceChange = (values: number[]) => {
+    if (activeCompanion === null) return;
+    const updated = [...companions];
+    updated[activeCompanion].orbitalDistance = values[0];
+    setCompanions(updated);
+  };
+
+  const handleMassChange = (mass: string) => {
+    if (activeCompanion === null) return;
+    const updated = [...companions];
+    updated[activeCompanion].mass = mass ? parseFloat(mass) : null;
+    setCompanions(updated);
+  };
+
+  const handleAgeChange = (age: string) => {
+    if (activeCompanion === null) return;
+    const updated = [...companions];
+    updated[activeCompanion].age = age ? parseFloat(age) : null;
+    setCompanions(updated);
+  };
+
   const addCompanion = () => {
+    if (companions.length >= maxCompanions) return;
+
     const newCompanion: Companion = {
       id: Date.now(),
       name: `Companion Star ${companions.length + 1}`,
       class: null,
+      luminosity: "Random",
+      orbitalDistance: 50,
+      mass: null,
+      age: null,
     };
     setCompanions([...companions, newCompanion]);
     setActiveCompanion(companions.length);
@@ -72,14 +187,15 @@ export function CreateCompanionStar() {
 
   const openRenameDialog = (e: React.MouseEvent, index: number) => {
     e.stopPropagation();
+    setActiveCompanion(index);
     setRenameValue(companions[index].name);
     setIsRenameOpen(true);
   };
 
   const handleRename = () => {
-    if (activeCompanion === null) return;
+    if (activeCompanion === null || !renameValue.trim()) return;
     const updated = [...companions];
-    updated[activeCompanion].name = renameValue;
+    updated[activeCompanion].name = renameValue.trim();
     setCompanions(updated);
     setIsRenameOpen(false);
   };
@@ -90,264 +206,503 @@ export function CreateCompanionStar() {
     setCompanions(updated);
 
     if (activeCompanion === index) {
-      setActiveCompanion(null);
+      setActiveCompanion(updated.length > 0 ? 0 : null);
     } else if (activeCompanion !== null && activeCompanion > index) {
       setActiveCompanion(activeCompanion - 1);
     }
   };
 
-  const getActiveColor = () => {
-    return activeCompanion !== null ? "bg-foreground" : "bg-accent";
+  // Get completion status for display
+  const getCompletionStatus = () => {
+    const configured = companions.filter(isCompanionComplete).length;
+    return { configured, total: companions.length };
   };
 
-  // Handler for Next button to navigate to main-world
+  // Handler for Next button
   const handleNext = useCallback(() => {
+    const companionData = {
+      systemType,
+      companions,
+    };
+    localStorage.setItem("companionStars", JSON.stringify(companionData));
     navigate("../main-world");
-  }, [navigate]);
+  }, [navigate, systemType, companions]);
 
-  // Update Next button state - always enabled on this page
+  // Update Next button state based on completion
   useEffect(() => {
     if (context) {
-      context.setNextDisabled(false);
+      const hasCompanions = companions.length > 0;
+      const hasConfiguredCompanion = companions.some(isCompanionComplete);
+      const canProceed = !hasCompanions || hasConfiguredCompanion;
+
+      context.setNextDisabled(!canProceed);
       context.setNextHandler(() => handleNext);
     }
-  }, [handleNext, context]);
+  }, [handleNext, context, companions]);
+
+  // Load saved data on mount
+  useEffect(() => {
+    const saved = localStorage.getItem("companionStars");
+    if (saved) {
+      try {
+        const data = JSON.parse(saved);
+        if (data.systemType) setSystemType(data.systemType);
+        if (data.companions) setCompanions(data.companions);
+      } catch (e) {
+        console.error("Failed to load saved companion data", e);
+      }
+    }
+  }, []);
+
+  const status = getCompletionStatus();
+  const canAddMore = companions.length < maxCompanions;
+  const activeCompanionData =
+    activeCompanion !== null ? companions[activeCompanion] : null;
 
   return (
-    <div className="container max-w-5xl mx-auto py-8">
-      <h1 className="text-4xl font-bold mb-8">
-        Creating your Companion Star(s)
-      </h1>
+    <TooltipProvider>
+      <div className="container max-w-5xl mx-auto py-8">
+        <div className="mb-6">
+          <h1 className="text-4xl font-bold mb-2">
+            Creating your Companion Star(s)
+          </h1>
+          <p className="text-muted-foreground">
+            Configure companion stars for your system. You can skip this step if
+            you want a single-star system.
+          </p>
+        </div>
 
-      <div className="flex gap-0 rounded-lg overflow-hidden shadow-lg min-h-[500px]">
-        {/* Left Panel */}
-        <div className="bg-muted pl-8 py-8 w-80 flex-shrink-0 flex flex-col">
-          <div className="space-y-4 flex-1">
-            <div className="pr-8">
-              <Label htmlFor="system-type">System Type</Label>
-              <Select value={systemType} onValueChange={setSystemType}>
-                <SelectTrigger id="system-type" className="mt-2">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Binary">Binary</SelectItem>
-                  <SelectItem value="Trinary">Trinary</SelectItem>
-                  <SelectItem value="Quaternary">Quaternary</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+        {/* Status Alert */}
+        {companions.length > 0 && status.configured < status.total && (
+          <Alert className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              {status.configured} of {status.total} companion star(s)
+              configured. Select a star class to complete configuration.
+            </AlertDescription>
+          </Alert>
+        )}
 
-            <div className="space-y-2 flex-1">
-              {companions.map((companion, index) => (
-                <Button
-                  key={companion.id}
-                  onClick={() => setActiveCompanion(index)}
-                  variant={activeCompanion === index ? "default" : "outline"}
-                  className={`w-full justify-between h-auto py-3 text-left font-normal ${
-                    activeCompanion === index
-                      ? "rounded-l-md rounded-r-none"
-                      : "mr-8 pr-8"
-                  }`}
+        <div className="flex gap-0 rounded-lg overflow-hidden shadow-lg min-h-[600px]">
+          {/* Left Panel */}
+          <div className="bg-muted pl-8 py-8 w-80 flex-shrink-0 flex flex-col">
+            <div className="space-y-4 flex-1">
+              <div className="pr-8">
+                <Label htmlFor="system-type">System Type</Label>
+                <Select
+                  value={systemType}
+                  onValueChange={(value) =>
+                    handleSystemTypeChange(value as SystemType)
+                  }
                 >
-                  <span>{companion.name}</span>
-                  {activeCompanion === index && (
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 hover:bg-background/20"
-                        onClick={(e) => openRenameDialog(e, index)}
+                  <SelectTrigger id="system-type" className="mt-2">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Binary">Binary (1 companion)</SelectItem>
+                    <SelectItem value="Trinary">
+                      Trinary (2 companions)
+                    </SelectItem>
+                    <SelectItem value="Quaternary">
+                      Quaternary (3 companions)
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2 flex-1">
+                {companions.map((companion, index) => (
+                  <Button
+                    key={companion.id}
+                    onClick={() => setActiveCompanion(index)}
+                    variant={activeCompanion === index ? "default" : "outline"}
+                    className={`w-full justify-between h-auto py-3 text-left font-normal ${
+                      activeCompanion === index
+                        ? "rounded-l-md rounded-r-none"
+                        : "mr-8 pr-8"
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      {companion.name}
+                      {!isCompanionComplete(companion) && (
+                        <span className="text-xs opacity-60">(incomplete)</span>
+                      )}
+                    </span>
+                    {activeCompanion === index && (
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 hover:bg-background/20"
+                          onClick={(e) => openRenameDialog(e, index)}
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 hover:bg-background/20"
+                          onClick={(e) => removeCompanion(e, index)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    )}
+                  </Button>
+                ))}
+              </div>
+
+              <div className="pr-8">
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={addCompanion}
+                  disabled={!canAddMore}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Companion {!canAddMore && `(Max ${maxCompanions})`}
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Panel - Refined Design */}
+          <div className="flex-1 bg-background overflow-y-auto max-h-[600px]">
+            {activeCompanionData ? (
+              <div className="p-8 space-y-6">
+                {/* Header with status badge */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-2xl font-semibold">
+                      {activeCompanionData.name}
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                      Configure companion star properties
+                    </p>
+                  </div>
+                  {isCompanionComplete(activeCompanionData) ? (
+                    <Badge variant="default" className="gap-1">
+                      <Sparkles className="h-3 w-3" />
+                      Complete
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary">Incomplete</Badge>
+                  )}
+                </div>
+
+                <Separator />
+
+                {/* Star Class Section */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      Star Class *
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="h-4 w-4 text-muted-foreground" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Harvard spectral classification</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-4 gap-3">
+                      {starClasses.map((starClass) => (
+                        <Tooltip key={starClass}>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant={
+                                activeCompanionData.class === starClass
+                                  ? "default"
+                                  : "outline"
+                              }
+                              onClick={() => handleClassSelect(starClass)}
+                              className="h-16 text-lg font-bold relative"
+                            >
+                              {starClass}
+                              {activeCompanionData.class === starClass &&
+                                starClass !== "Random" && (
+                                  <span className="absolute top-1 right-1 text-[10px] font-normal">
+                                    {STAR_CLASS_INFO[starClass].color}
+                                  </span>
+                                )}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {starClass !== "Random" ? (
+                              <div className="space-y-1">
+                                <p className="font-semibold">
+                                  {STAR_CLASS_INFO[starClass].color}
+                                </p>
+                                <p className="text-xs">
+                                  {STAR_CLASS_INFO[starClass].temp}
+                                </p>
+                              </div>
+                            ) : (
+                              <p>Randomly generate star class</p>
+                            )}
+                          </TooltipContent>
+                        </Tooltip>
+                      ))}
+                    </div>
+
+                    {/* Show selected class info */}
+                    {activeCompanionData.class &&
+                      activeCompanionData.class !== "Random" && (
+                        <div className="mt-4 p-4 bg-primary/5 rounded-lg border border-primary/20">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-medium">
+                                {
+                                  STAR_CLASS_INFO[activeCompanionData.class]
+                                    .color
+                                }{" "}
+                                Star
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                {
+                                  STAR_CLASS_INFO[activeCompanionData.class]
+                                    .temp
+                                }
+                              </p>
+                            </div>
+                            <Badge variant="outline" className="font-mono">
+                              {activeCompanionData.class}
+                            </Badge>
+                          </div>
+                        </div>
+                      )}
+                  </CardContent>
+                </Card>
+
+                {/* Additional Settings */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">
+                      Additional Properties
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Optional parameters (will be auto-generated if not
+                      specified)
+                    </p>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {/* Luminosity Class */}
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="luminosity"
+                        className="flex items-center gap-2"
                       >
-                        <Pencil className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 hover:bg-background/20"
-                        onClick={(e) => removeCompanion(e, index)}
+                        Luminosity Class
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="h-4 w-4 text-muted-foreground" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Yerkes spectral classification</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </Label>
+                      <Select
+                        value={activeCompanionData.luminosity}
+                        onValueChange={(value) =>
+                          handleLuminosityChange(value as LuminosityClass)
+                        }
                       >
-                        <Trash2 className="h-3 w-3" />
+                        <SelectTrigger id="luminosity">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Random">Random</SelectItem>
+                          <SelectItem value="I">I - Supergiant</SelectItem>
+                          <SelectItem value="II">II - Bright Giant</SelectItem>
+                          <SelectItem value="III">III - Giant</SelectItem>
+                          <SelectItem value="IV">IV - Subgiant</SelectItem>
+                          <SelectItem value="V">V - Main Sequence</SelectItem>
+                          <SelectItem value="VI">VI - Subdwarf</SelectItem>
+                          <SelectItem value="VII">VII - White Dwarf</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <Separator />
+
+                    {/* Orbital Distance */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label className="flex items-center gap-2">
+                          Orbital Distance
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Info className="h-4 w-4 text-muted-foreground" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Distance from the primary star in AU</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </Label>
+                        <Badge variant="outline" className="font-mono">
+                          {activeCompanionData.orbitalDistance} AU
+                        </Badge>
+                      </div>
+                      <Slider
+                        value={[activeCompanionData.orbitalDistance]}
+                        onValueChange={handleOrbitalDistanceChange}
+                        min={1}
+                        max={100}
+                        step={1}
+                        className="w-full"
+                      />
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>1 AU</span>
+                        <span>50 AU</span>
+                        <span>100 AU</span>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    {/* Mass */}
+                    <div className="space-y-2">
+                      <Label htmlFor="mass" className="flex items-center gap-2">
+                        Mass (Solar Masses)
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="h-4 w-4 text-muted-foreground" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Star mass relative to our Sun (M☉)</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id="mass"
+                          type="number"
+                          step="0.1"
+                          min="0.08"
+                          max="100"
+                          placeholder="Auto-generated"
+                          value={activeCompanionData.mass ?? ""}
+                          onChange={(e) => handleMassChange(e.target.value)}
+                          className="flex-1"
+                        />
+                        <div className="flex items-center px-3 bg-muted rounded-md">
+                          <span className="text-sm font-medium">M☉</span>
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Range: 0.08-100 M☉
+                      </p>
+                    </div>
+
+                    <Separator />
+
+                    {/* Age */}
+                    <div className="space-y-2">
+                      <Label htmlFor="age" className="flex items-center gap-2">
+                        Age (Billion Years)
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="h-4 w-4 text-muted-foreground" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>
+                              Stellar age (Universe is ~13.8 billion years old)
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id="age"
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          max="13.8"
+                          placeholder="Auto-generated"
+                          value={activeCompanionData.age ?? ""}
+                          onChange={(e) => handleAgeChange(e.target.value)}
+                          className="flex-1"
+                        />
+                        <div className="flex items-center px-3 bg-muted rounded-md">
+                          <span className="text-sm font-medium">Gyr</span>
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Range: 0-13.8 billion years
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-full p-8">
+                <Card className="max-w-md">
+                  <CardContent className="pt-6">
+                    <div className="text-center space-y-4">
+                      <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+                        <Plus className="h-6 w-6 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold mb-2">
+                          {companions.length === 0
+                            ? "No Companion Stars Yet"
+                            : "Select a Companion Star"}
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          {companions.length === 0
+                            ? "Add a companion star from the left panel to begin configuration"
+                            : "Choose a companion star from the list to configure its properties"}
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        onClick={() => navigate("../main-world")}
+                        className="mt-4"
+                      >
+                        Skip to Main World
                       </Button>
                     </div>
-                  )}
-                </Button>
-              ))}
-            </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </div>
+        </div>
 
-            <div className="pr-8">
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={addCompanion}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Companion
+        {/* Rename Dialog */}
+        <Dialog open={isRenameOpen} onOpenChange={setIsRenameOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Rename Companion Star</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <Label htmlFor="star-name">Star Name</Label>
+              <Input
+                id="star-name"
+                value={renameValue}
+                onChange={(e) => setRenameValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleRename();
+                }}
+                className="mt-2"
+                autoFocus
+              />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsRenameOpen(false)}>
+                Cancel
               </Button>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Panel - Scrollable - Color matches active button */}
-        <div
-          className={`flex-1 p-8 overflow-y-auto max-h-[600px] transition-colors ${getActiveColor()}`}
-        >
-          {activeCompanion !== null ? (
-            <div className="space-y-8">
-              <div>
-                <h2
-                  className={`text-lg font-medium mb-4 ${
-                    activeCompanion !== null
-                      ? "text-background"
-                      : "text-accent-foreground"
-                  }`}
-                >
-                  Star Class
-                </h2>
-                <div className="grid grid-cols-3 gap-4">
-                  {starClasses.map((starClass) => (
-                    <Button
-                      key={starClass}
-                      variant={
-                        companions[activeCompanion].class === starClass
-                          ? "default"
-                          : "secondary"
-                      }
-                      onClick={() => handleClassSelect(starClass)}
-                      className="h-20 text-lg font-bold"
-                    >
-                      {starClass}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Additional Settings Section */}
-              <div>
-                <h2
-                  className={`text-lg font-medium mb-4 ${
-                    activeCompanion !== null
-                      ? "text-background"
-                      : "text-accent-foreground"
-                  }`}
-                >
-                  Additional Settings
-                </h2>
-                <div className="space-y-4">
-                  <div>
-                    <Label
-                      htmlFor="luminosity"
-                      className={
-                        activeCompanion !== null ? "text-background" : ""
-                      }
-                    >
-                      Luminosity
-                    </Label>
-                    <Select>
-                      <SelectTrigger id="luminosity" className="mt-2">
-                        <SelectValue placeholder="Random" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="random">Random</SelectItem>
-                        <SelectItem value="i">I - Supergiant</SelectItem>
-                        <SelectItem value="ii">II - Bright Giant</SelectItem>
-                        <SelectItem value="iii">III - Giant</SelectItem>
-                        <SelectItem value="iv">IV - Subgiant</SelectItem>
-                        <SelectItem value="v">V - Main Sequence</SelectItem>
-                        <SelectItem value="vi">VI - Subdwarf</SelectItem>
-                        <SelectItem value="vii">VII - White Dwarf</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label
-                      htmlFor="orbital-distance"
-                      className={
-                        activeCompanion !== null ? "text-background" : ""
-                      }
-                    >
-                      Orbital Distance
-                    </Label>
-                    <input
-                      id="orbital-distance"
-                      type="range"
-                      min="0"
-                      max="100"
-                      className="w-full mt-2"
-                    />
-                  </div>
-
-                  <div>
-                    <Label
-                      htmlFor="mass"
-                      className={
-                        activeCompanion !== null ? "text-background" : ""
-                      }
-                    >
-                      Mass (Solar Masses)
-                    </Label>
-                    <Input
-                      id="mass"
-                      type="number"
-                      step="0.1"
-                      placeholder="Auto-generated"
-                      className="mt-2"
-                    />
-                  </div>
-
-                  <div>
-                    <Label
-                      htmlFor="age"
-                      className={
-                        activeCompanion !== null ? "text-background" : ""
-                      }
-                    >
-                      Age (Billion Years)
-                    </Label>
-                    <Input
-                      id="age"
-                      type="number"
-                      step="0.1"
-                      placeholder="Auto-generated"
-                      className="mt-2"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center justify-center h-full text-accent-foreground">
-              <p className="text-lg">
-                Select or add a companion star to configure
-              </p>
-            </div>
-          )}
-        </div>
+              <Button onClick={handleRename} disabled={!renameValue.trim()}>
+                Save
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
-
-      {/* Rename Dialog */}
-      <Dialog open={isRenameOpen} onOpenChange={setIsRenameOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Rename Companion Star</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <Label htmlFor="star-name">Star Name</Label>
-            <Input
-              id="star-name"
-              value={renameValue}
-              onChange={(e) => setRenameValue(e.target.value)}
-              className="mt-2"
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsRenameOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleRename}>Save</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+    </TooltipProvider>
   );
 }
