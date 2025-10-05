@@ -48,6 +48,21 @@ const ROUTE_CONFIG: Record<string, RouteConfig> = {
     showNext: true,
     previousPath: "/create-new/main-world",
   },
+  "/create-new/position": {
+    showPrevious: true,
+    showNext: true,
+    previousPath: "/create-new/habitability",
+  },
+  "/create-new/inhabitants": {
+    showPrevious: true,
+    showNext: true,
+    previousPath: "/create-new/position",
+  },
+  "/create-new/planetary-system": {
+    showPrevious: true,
+    showNext: false,
+    previousPath: "/create-new/inhabitants",
+  },
 };
 
 export function CenteredLayout() {
