@@ -2,6 +2,7 @@ import { Routes, Route } from "react-router-dom";
 import { MainLayout } from "./components/layout/main-layout";
 import { CenteredLayout } from "./components/layout/centered-layout";
 import { Home } from "./pages/Home";
+import { MyWorlds } from "./pages/MyWorlds";
 import { CreateNewPage } from "./pages/CreateNew";
 import { CreatePrimaryStar } from "./pages/CreatePrimaryStar";
 import { CreateWorldContext } from "./pages/CreateWorldContext";
@@ -17,10 +18,7 @@ export default function AppRoutes() {
     <Routes>
       <Route element={<MainLayout />}>
         <Route path="/" element={<Home />} />
-        <Route
-          path="/my-worlds"
-          element={<div>My Worlds Page (Coming Soon)</div>}
-        />
+        <Route path="/my-worlds" element={<MyWorlds />} />
       </Route>
       <Route path="/create-new" element={<CenteredLayout />}>
         <Route index element={<CreateNewPage />} />
