@@ -17,7 +17,7 @@ export default function AppRoutes() {
   return (
     <Routes>
       <Route element={<MainLayout />}>
-        <Route path="/" element={<Home />} />
+        <Route index element={<Home />} />
         <Route path="/my-worlds" element={<MyWorlds />} />
       </Route>
       <Route path="/create-new" element={<CenteredLayout />}>
