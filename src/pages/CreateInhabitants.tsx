@@ -181,7 +181,7 @@ export function CreateInhabitants() {
 
   return (
     <TooltipProvider>
-      <div className="w-full max-w-2xl mx-auto px-4 py-8">
+      <div className="w-full max-w-7xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">Inhabitants</h1>
@@ -190,276 +190,298 @@ export function CreateInhabitants() {
           </p>
         </div>
 
-        {/* Actual Population */}
-        <div className="mb-8">
-          <Label
-            htmlFor="population"
-            className="text-lg font-semibold mb-3 block"
-          >
-            Actual Population
-          </Label>
-          <Input
-            id="population"
-            type="number"
-            value={population}
-            onChange={(e) => setPopulation(e.target.value)}
-            className="text-xl font-semibold text-center"
-            placeholder="Enter population"
-          />
-          <p className="text-sm text-muted-foreground mt-2 text-center">
-            {formatPopulation(population || "0")}
-          </p>
-        </div>
-
-        {/* Wealth */}
-        <div className="mb-8">
-          <Label className="text-lg font-semibold mb-4 flex items-center gap-2">
-            Wealth
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Info className="h-4 w-4 text-muted-foreground" />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Economic prosperity level of the world</p>
-              </TooltipContent>
-            </Tooltip>
-          </Label>
-          <div className="grid grid-cols-2 gap-3">
-            {WEALTH_OPTIONS.map((option) => (
-              <Card
-                key={option.value}
-                role="button"
-                onClick={() => setWealth(option.value)}
-                className={cn(
-                  "cursor-pointer transition-all hover:border-primary/50 relative",
-                  wealth === option.value &&
-                    "border-primary border-2 bg-primary/5"
-                )}
-              >
-                <CardContent className="flex items-center justify-center p-8 relative">
-                  <div
-                    className={cn(
-                      "absolute top-3 right-3 h-5 w-5 rounded-full border-2",
-                      wealth === option.value
-                        ? "border-primary bg-primary"
-                        : "border-muted-foreground"
-                    )}
-                  >
-                    {wealth === option.value && (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="h-2 w-2 rounded-full bg-primary-foreground" />
-                      </div>
-                    )}
-                  </div>
-                  <span className="text-lg font-semibold">{option.label}</span>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-
-        {/* World Power Structure */}
-        <div className="mb-8">
-          <Label className="text-lg font-semibold mb-4 flex items-center gap-2">
-            World Power Structure
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Info className="h-4 w-4 text-muted-foreground" />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Political organization of the world</p>
-              </TooltipContent>
-            </Tooltip>
-          </Label>
-          <div className="grid grid-cols-2 gap-3">
-            {POWER_STRUCTURE.map((option) => (
-              <Card
-                key={option.value}
-                role="button"
-                onClick={() => setPowerStructure(option.value)}
-                className={cn(
-                  "cursor-pointer transition-all hover:border-primary/50 relative",
-                  powerStructure === option.value &&
-                    "border-primary border-2 bg-primary/5"
-                )}
-              >
-                <CardContent className="flex items-center justify-center p-8 relative">
-                  <div
-                    className={cn(
-                      "absolute top-3 right-3 h-5 w-5 rounded-full border-2",
-                      powerStructure === option.value
-                        ? "border-primary bg-primary"
-                        : "border-muted-foreground"
-                    )}
-                  >
-                    {powerStructure === option.value && (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="h-2 w-2 rounded-full bg-primary-foreground" />
-                      </div>
-                    )}
-                  </div>
-                  <span className="text-lg font-semibold">{option.label}</span>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-
-        {/* World Development */}
-        <div className="mb-8">
-          <Label
-            htmlFor="development"
-            className="text-lg font-semibold mb-3 block"
-          >
-            World Development
-          </Label>
-          <Select value={development} onValueChange={setDevelopment}>
-            <SelectTrigger id="development">
-              <SelectValue placeholder="Select development level" />
-            </SelectTrigger>
-            <SelectContent>
-              {DEVELOPMENT_OPTIONS.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  <div className="flex flex-col">
-                    <span className="font-medium">{option.label}</span>
-                    <span className="text-xs text-muted-foreground">
-                      HDI: {option.hdi}
-                    </span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* World Source of Power */}
-        <div className="mb-8">
-          <Label className="text-lg font-semibold mb-4 flex items-center gap-2">
-            World Source of Power
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Info className="h-4 w-4 text-muted-foreground" />
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Basis of authority and legitimacy</p>
-              </TooltipContent>
-            </Tooltip>
-          </Label>
-          <div className="grid grid-cols-2 gap-3">
-            {SOURCE_OF_POWER.map((option) => (
-              <Card
-                key={option.value}
-                role="button"
-                onClick={() => setSourceOfPower(option.value)}
-                className={cn(
-                  "cursor-pointer transition-all hover:border-primary/50 relative",
-                  sourceOfPower === option.value &&
-                    "border-primary border-2 bg-primary/5"
-                )}
-              >
-                <CardContent className="flex items-center justify-center p-8 relative">
-                  <div
-                    className={cn(
-                      "absolute top-3 right-3 h-5 w-5 rounded-full border-2",
-                      sourceOfPower === option.value
-                        ? "border-primary bg-primary"
-                        : "border-muted-foreground"
-                    )}
-                  >
-                    {sourceOfPower === option.value && (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="h-2 w-2 rounded-full bg-primary-foreground" />
-                      </div>
-                    )}
-                  </div>
-                  <span className="text-lg font-semibold">{option.label}</span>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-
-        {/* Amber Zone */}
-        <div className="mb-8">
-          <div className="flex items-center space-x-2 mb-4">
-            <Checkbox
-              id="amber-zone"
-              checked={amberZone}
-              onCheckedChange={(checked) => setAmberZone(checked as boolean)}
-            />
-            <Label
-              htmlFor="amber-zone"
-              className="text-lg font-semibold cursor-pointer flex items-center gap-2"
-            >
-              Amber Zone
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Info className="h-4 w-4 text-muted-foreground" />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>World deemed dangerous; travelers should be cautious</p>
-                </TooltipContent>
-              </Tooltip>
-            </Label>
-          </div>
-
-          {amberZone && (
+        {/* Two Column Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Left Column */}
+          <div className="space-y-8">
+            {/* Actual Population */}
             <div>
-              <Label htmlFor="amber-reason" className="text-base mb-2 block">
-                Amber Zone Reason
-              </Label>
-              <Select
-                value={amberZoneReason}
-                onValueChange={setAmberZoneReason}
+              <Label
+                htmlFor="population"
+                className="text-lg font-semibold mb-3 block"
               >
-                <SelectTrigger id="amber-reason">
-                  <SelectValue placeholder="Select reason" />
+                Actual Population
+              </Label>
+              <Input
+                id="population"
+                type="number"
+                value={population}
+                onChange={(e) => setPopulation(e.target.value)}
+                className="text-xl font-semibold text-center"
+                placeholder="Enter population"
+              />
+              <p className="text-sm text-muted-foreground mt-2 text-center">
+                {formatPopulation(population || "0")}
+              </p>
+            </div>
+
+            {/* Wealth */}
+            <div>
+              <Label className="text-lg font-semibold mb-4 flex items-center gap-2">
+                Wealth
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Economic prosperity level of the world</p>
+                  </TooltipContent>
+                </Tooltip>
+              </Label>
+              <div className="grid grid-cols-2 gap-3">
+                {WEALTH_OPTIONS.map((option) => (
+                  <Card
+                    key={option.value}
+                    role="button"
+                    onClick={() => setWealth(option.value)}
+                    className={cn(
+                      "cursor-pointer transition-all hover:border-primary/50 relative",
+                      wealth === option.value &&
+                        "border-primary border-2 bg-primary/5"
+                    )}
+                  >
+                    <CardContent className="flex items-center justify-center p-8 relative">
+                      <div
+                        className={cn(
+                          "absolute top-3 right-3 h-5 w-5 rounded-full border-2",
+                          wealth === option.value
+                            ? "border-primary bg-primary"
+                            : "border-muted-foreground"
+                        )}
+                      >
+                        {wealth === option.value && (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="h-2 w-2 rounded-full bg-primary-foreground" />
+                          </div>
+                        )}
+                      </div>
+                      <span className="text-lg font-semibold">
+                        {option.label}
+                      </span>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+
+            {/* World Power Structure */}
+            <div>
+              <Label className="text-lg font-semibold mb-4 flex items-center gap-2">
+                World Power Structure
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Political organization of the world</p>
+                  </TooltipContent>
+                </Tooltip>
+              </Label>
+              <div className="grid grid-cols-2 gap-3">
+                {POWER_STRUCTURE.map((option) => (
+                  <Card
+                    key={option.value}
+                    role="button"
+                    onClick={() => setPowerStructure(option.value)}
+                    className={cn(
+                      "cursor-pointer transition-all hover:border-primary/50 relative",
+                      powerStructure === option.value &&
+                        "border-primary border-2 bg-primary/5"
+                    )}
+                  >
+                    <CardContent className="flex items-center justify-center p-8 relative">
+                      <div
+                        className={cn(
+                          "absolute top-3 right-3 h-5 w-5 rounded-full border-2",
+                          powerStructure === option.value
+                            ? "border-primary bg-primary"
+                            : "border-muted-foreground"
+                        )}
+                      >
+                        {powerStructure === option.value && (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="h-2 w-2 rounded-full bg-primary-foreground" />
+                          </div>
+                        )}
+                      </div>
+                      <span className="text-lg font-semibold">
+                        {option.label}
+                      </span>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+
+            {/* World Development */}
+            <div>
+              <Label
+                htmlFor="development"
+                className="text-lg font-semibold mb-3 block"
+              >
+                World Development
+              </Label>
+              <Select value={development} onValueChange={setDevelopment}>
+                <SelectTrigger id="development">
+                  <SelectValue placeholder="Select development level" />
                 </SelectTrigger>
                 <SelectContent>
-                  {AMBER_ZONE_REASONS.map((reason) => (
-                    <SelectItem key={reason.value} value={reason.value}>
-                      {reason.label}
+                  {DEVELOPMENT_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{option.label}</span>
+                        <span className="text-xs text-muted-foreground">
+                          HDI: {option.hdi}
+                        </span>
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-          )}
-        </div>
+          </div>
 
-        {/* Summary Cards */}
-        {isFormComplete && (
-          <Card className="p-6 bg-muted/30">
-            <div className="space-y-4">
-              <div>
-                <h3 className="text-sm font-semibold mb-2 text-muted-foreground uppercase tracking-wide">
-                  Human Development Index
-                </h3>
-                <div className="space-y-1">
-                  <Skeleton className="h-3 w-full" />
-                  <Skeleton className="h-3 w-3/4" />
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-sm font-semibold mb-2 text-muted-foreground uppercase tracking-wide">
-                  Ave. SOC
-                </h3>
-                <div className="space-y-1">
-                  <Skeleton className="h-3 w-full" />
-                  <Skeleton className="h-3 w-2/3" />
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-sm font-semibold mb-2 text-muted-foreground uppercase tracking-wide">
-                  Habitability
-                </h3>
-                <Skeleton className="h-3 w-1/2" />
+          {/* Right Column */}
+          <div className="space-y-8">
+            {/* World Source of Power */}
+            <div>
+              <Label className="text-lg font-semibold mb-4 flex items-center gap-2">
+                World Source of Power
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Basis of authority and legitimacy</p>
+                  </TooltipContent>
+                </Tooltip>
+              </Label>
+              <div className="grid grid-cols-2 gap-3">
+                {SOURCE_OF_POWER.map((option) => (
+                  <Card
+                    key={option.value}
+                    role="button"
+                    onClick={() => setSourceOfPower(option.value)}
+                    className={cn(
+                      "cursor-pointer transition-all hover:border-primary/50 relative",
+                      sourceOfPower === option.value &&
+                        "border-primary border-2 bg-primary/5"
+                    )}
+                  >
+                    <CardContent className="flex items-center justify-center p-8 relative">
+                      <div
+                        className={cn(
+                          "absolute top-3 right-3 h-5 w-5 rounded-full border-2",
+                          sourceOfPower === option.value
+                            ? "border-primary bg-primary"
+                            : "border-muted-foreground"
+                        )}
+                      >
+                        {sourceOfPower === option.value && (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="h-2 w-2 rounded-full bg-primary-foreground" />
+                          </div>
+                        )}
+                      </div>
+                      <span className="text-lg font-semibold">
+                        {option.label}
+                      </span>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             </div>
-          </Card>
-        )}
+
+            {/* Amber Zone */}
+            <div>
+              <div className="flex items-center space-x-2 mb-4">
+                <Checkbox
+                  id="amber-zone"
+                  checked={amberZone}
+                  onCheckedChange={(checked) =>
+                    setAmberZone(checked as boolean)
+                  }
+                />
+                <Label
+                  htmlFor="amber-zone"
+                  className="text-lg font-semibold cursor-pointer flex items-center gap-2"
+                >
+                  Amber Zone
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-4 w-4 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>
+                        World deemed dangerous; travelers should be cautious
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </Label>
+              </div>
+
+              {amberZone && (
+                <div>
+                  <Label
+                    htmlFor="amber-reason"
+                    className="text-base mb-2 block"
+                  >
+                    Amber Zone Reason
+                  </Label>
+                  <Select
+                    value={amberZoneReason}
+                    onValueChange={setAmberZoneReason}
+                  >
+                    <SelectTrigger id="amber-reason">
+                      <SelectValue placeholder="Select reason" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {AMBER_ZONE_REASONS.map((reason) => (
+                        <SelectItem key={reason.value} value={reason.value}>
+                          {reason.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+
+            {/* Summary Cards */}
+            {isFormComplete && (
+              <Card className="p-6 bg-muted/30">
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-sm font-semibold mb-2 text-muted-foreground uppercase tracking-wide">
+                      Human Development Index
+                    </h3>
+                    <div className="space-y-1">
+                      <Skeleton className="h-3 w-full" />
+                      <Skeleton className="h-3 w-3/4" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-sm font-semibold mb-2 text-muted-foreground uppercase tracking-wide">
+                      Ave. SOC
+                    </h3>
+                    <div className="space-y-1">
+                      <Skeleton className="h-3 w-full" />
+                      <Skeleton className="h-3 w-2/3" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-sm font-semibold mb-2 text-muted-foreground uppercase tracking-wide">
+                      Habitability
+                    </h3>
+                    <Skeleton className="h-3 w-1/2" />
+                  </div>
+                </div>
+              </Card>
+            )}
+          </div>
+        </div>
       </div>
     </TooltipProvider>
   );
