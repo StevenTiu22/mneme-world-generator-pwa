@@ -1,5 +1,9 @@
 # Mneme World Generator (MWG)
 
+> **Source:** [Mneme World Generator — DriveThruRPG](https://www.drivethrurpg.com/en/product/403824/mneme-world-generator) by Justin Aquino and Nicco Salonga\
+> The public preview includes the full book, but with a watermark.\
+> **Spreadsheet Version:** [Google Sheet — Mneme World Generator](https://docs.google.com/spreadsheets/d/1YiFA-THVnSGyMltVcDvS9nGlF4k8RFrjg89ZGNSw7ZM/edit?gid=1542365405#gid=1542365405) [(see footnote)](#spreadsheet-footnote)
+
 A progressive web application for generating and managing fictional worlds, built with modern web technologies.
 
 ---
@@ -93,9 +97,7 @@ Run a local test instance for live updates and debugging.
 pnpm dev
 ```
 
-Then, open `http://localhost:5173` in a browser.
-
-You can also test on your phone (same Wi-Fi): open `http://<your-LAN-IP>:5173`.
+Then, open `http://localhost:5173` in a browser. You can also test on your phone (same Wi‑Fi): open `http://<your-LAN-IP>:5173`.
 
 ---
 
@@ -205,6 +207,21 @@ mneme-world-generator-pwa/
 
 ---
 
+## 🧱 Milestones
+
+| Milestone | Description                         | Status     | % of Project | Timeline     |
+| --------- | ----------------------------------- | ---------- | ------------ | ------------ |
+| **1**     | Preparation Stage                   | ✅ Done     | 16%          | —            |
+| **2**     | UI Stage                            | ✅ Done     | 32%          | —            |
+| **3**     | Star Generation Stage               | 🔄 Ongoing | 48%          | Oct 17–31    |
+| **3.1**   | Star Generation Phase               | 🔄 Ongoing | —            | Oct 24–30    |
+| **3.2**   | Persistence (Export only for now)   | 🔄 Ongoing | —            | Oct 17–23    |
+| **4**     | Primary World Generation and Export | ⏳ Pending  | —            | Oct 30–Nov 6 |
+| **5**     | Save/Load & Import/Export Stage     | ⏳ Pending  | —            | Nov 7–13     |
+| **6**     | Generate Disks and Planets          | ⏳ Pending  | —            | Nov 14–20    |
+
+---
+
 ## 👤 Author
 
 **Steven Tiu** — Author\
@@ -214,10 +231,16 @@ mneme-world-generator-pwa/
 
 ## 📄 License
 
-This project is licensed under the **GNU General Public License v3 (GPL-3.0)**.
-
-You are free to use, modify, and distribute this software, provided that all derived works remain open source under the same license.
+This project is licensed under the **GNU General Public License v3 (GPL‑3.0)**. You are free to use, modify, and distribute this software, provided that all derived works remain open source under the same license.
 
 ---
 
-Built with ❤️ using React, TypeScript, and Vite.
+## 🧾 Footnote: Spreadsheet Instructions {#spreadsheet-footnote}
+
+The Google Sheets version includes a built‑in JavaScript roller and encoder. To use it safely:
+
+1. **Copy the spreadsheet** — Go to *File → Make a Copy*.
+2. **Approve permissions** — The first time you click *Generate System*, Google will prompt you to approve script execution. Review and allow the script to run.
+3. **Save the results** — Once a world is generated, right‑click the *World Sheet* tab, select *Copy to → New Spreadsheet*, and rename it for record keeping.
+
+> Sheet link: [https://docs.google.com/spreadsheets/d/1YiFA-THVnSGyMltVcDvS9nGlF4k8RFrjg89ZGNSw7ZM/edit?gid=1542365405#gid=1542365405](https://docs.google.com/spreadsheets/d/1YiFA-THVnSGyMltVcDvS9nGlF4k8RFrjg89ZGNSw7ZM/edit?gid=1542365405#gid=1542365405)
