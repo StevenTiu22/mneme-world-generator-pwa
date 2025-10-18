@@ -207,7 +207,7 @@ mneme-world-generator-pwa/
 
 ## 👤 Author
 
-**Steven Tiu** — Author
+**Steven Tiu** — Author\
 **Justin Cesar Aquino** — Project Sponsor
 
 ---
