@@ -1,8 +1,11 @@
 # Mneme World Generator (MWG)
+<<<<<<< Updated upstream
 
 > **Source:** [Mneme World Generator — DriveThruRPG](https://www.drivethrurpg.com/en/product/403824/mneme-world-generator) by Justin Aquino and Nicco Salonga\
 > The public preview includes the full book, but with a watermark.\
 > **Spreadsheet Version:** [Google Sheet — Mneme World Generator](https://docs.google.com/spreadsheets/d/1YiFA-THVnSGyMltVcDvS9nGlF4k8RFrjg89ZGNSw7ZM/edit?gid=1542365405#gid=1542365405) [(see footnote)](#spreadsheet-footnote)
+=======
+>>>>>>> Stashed changes
 
 A progressive web application for generating and managing fictional worlds, built with modern web technologies.
 
@@ -97,8 +100,15 @@ Run a local test instance for live updates and debugging.
 pnpm dev
 ```
 
+<<<<<<< Updated upstream
 Then, open `http://localhost:5173` in a browser. You can also test on your phone (same Wi‑Fi): open `http://<your-LAN-IP>:5173`.
 
+=======
+Then, open `http://localhost:5173` in a browser.
+
+You can also test on your phone (same Wi-Fi): open `http://<your-LAN-IP>:5173`.
+
+>>>>>>> Stashed changes
 ---
 
 ## 📦 Build for Deployment
@@ -207,6 +217,7 @@ mneme-world-generator-pwa/
 
 ---
 
+<<<<<<< Updated upstream
 ## 🧱 Milestones
 
 | Milestone | Description                         | Status     | % of Project | Timeline     |
@@ -222,6 +233,8 @@ mneme-world-generator-pwa/
 
 ---
 
+=======
+>>>>>>> Stashed changes
 ## 👤 Author
 
 **Steven Tiu** — Author\
@@ -231,6 +244,7 @@ mneme-world-generator-pwa/
 
 ## 📄 License
 
+<<<<<<< Updated upstream
 This project is licensed under the **GNU General Public License v3 (GPL‑3.0)**. You are free to use, modify, and distribute this software, provided that all derived works remain open source under the same license.
 
 ---
@@ -244,3 +258,13 @@ The Google Sheets version includes a built‑in JavaScript roller and encoder. T
 3. **Save the results** — Once a world is generated, right‑click the *World Sheet* tab, select *Copy to → New Spreadsheet*, and rename it for record keeping.
 
 > Sheet link: [https://docs.google.com/spreadsheets/d/1YiFA-THVnSGyMltVcDvS9nGlF4k8RFrjg89ZGNSw7ZM/edit?gid=1542365405#gid=1542365405](https://docs.google.com/spreadsheets/d/1YiFA-THVnSGyMltVcDvS9nGlF4k8RFrjg89ZGNSw7ZM/edit?gid=1542365405#gid=1542365405)
+=======
+This project is licensed under the **GNU General Public License v3 (GPL-3.0)**.
+
+You are free to use, modify, and distribute this software, provided that all derived works remain open source under the same license.
+
+---
+
+Built with ❤️ using React, TypeScript, and Vite.
+
+>>>>>>> Stashed changes
