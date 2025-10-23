@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
+import { useLiveQuery } from "dexie-react-hooks";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -12,82 +13,15 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { getStellarProperty } from "@/lib/db/queries/stellarQueries";
+import type {
+  StellarClass as StellarClassType,
+  StellarGrade,
+} from "@/models/stellar/types/enums";
 
-// --- Enhanced Data with Grade-based calculations ---
+// --- Star class constants (UI only) ---
 const STAR_CLASSES = ["O", "B", "A", "F", "G", "K", "M"] as const;
 type StarClass = (typeof STAR_CLASSES)[number];
-
-interface StarData {
-  color: string;
-  description: string;
-  temperature: string;
-}
-
-const STAR_CLASS_INFO: Record<StarClass, StarData> = {
-  O: {
-    color: "Blue",
-    description: "Extremely hot and luminous",
-    temperature: "≥30,000 K",
-  },
-  B: {
-    color: "Blue-White",
-    description: "Very hot and bright",
-    temperature: "10,000-30,000 K",
-  },
-  A: {
-    color: "White",
-    description: "Hot main sequence",
-    temperature: "7,500-10,000 K",
-  },
-  F: {
-    color: "Yellow-White",
-    description: "Intermediate temperature",
-    temperature: "6,000-7,500 K",
-  },
-  G: {
-    color: "Yellow",
-    description: "Sun-like stars",
-    temperature: "5,200-6,000 K",
-  },
-  K: {
-    color: "Orange",
-    description: "Cool main sequence",
-    temperature: "3,700-5,200 K",
-  },
-  M: {
-    color: "Red",
-    description: "Cool, dim, and common",
-    temperature: "2,400-3,700 K",
-  },
-};
-
-// Mass values based on Stellar Class and Grade (from documentation)
-const STELLAR_MASS: Record<StarClass, number[]> = {
-  O: [128.0, 116.8, 105.6, 94.4, 83.2, 72.0, 60.8, 49.6, 38.4, 27.2],
-  B: [16.0, 14.61, 13.22, 11.83, 10.44, 9.05, 7.66, 6.27, 4.88, 3.49],
-  A: [2.1, 2.03, 1.96, 1.89, 1.82, 1.75, 1.68, 1.61, 1.54, 1.47],
-  F: [1.4, 1.36, 1.33, 1.29, 1.26, 1.22, 1.18, 1.15, 1.11, 1.08],
-  G: [1.04, 1.02, 0.99, 0.97, 0.94, 0.92, 0.9, 0.87, 0.85, 0.82],
-  K: [0.8, 0.77, 0.73, 0.7, 0.66, 0.63, 0.59, 0.56, 0.52, 0.49],
-  M: [0.45, 0.41, 0.38, 0.34, 0.3, 0.27, 0.23, 0.19, 0.15, 0.12],
-};
-
-// Luminosity values based on Stellar Class and Grade (from documentation)
-const STELLAR_LUMINOSITY: Record<StarClass, number[]> = {
-  O: [
-    3516325, 2071113, 1219884, 718510, 423202, 249266, 146817, 86475, 50934,
-    30000,
-  ],
-  B: [
-    14752.9, 7260.98, 3573.66, 1758.86, 865.66, 426.06, 209.69, 103.21, 50.8,
-    25.0,
-  ],
-  A: [23.0, 21.2, 19.4, 17.6, 15.8, 14.0, 12.2, 10.4, 8.6, 5.0],
-  F: [4.65, 4.34, 4.02, 3.71, 3.39, 3.08, 2.76, 2.45, 2.13, 1.5],
-  G: [1.41, 1.33, 1.25, 1.17, 1.09, 1.01, 0.92, 0.84, 0.76, 0.6],
-  K: [0.55, 0.5, 0.45, 0.41, 0.36, 0.31, 0.27, 0.22, 0.17, 0.08],
-  M: [0.07, 0.07, 0.06, 0.05, 0.05, 0.04, 0.03, 0.03, 0.02, 0.01],
-};
 
 interface LayoutContext {
   setNextDisabled: (disabled: boolean) => void;
@@ -110,18 +44,34 @@ export function CreatePrimaryStar() {
   const [selectedClass, setSelectedClass] = useState<StarClass>("G");
   const [classGrade, setClassGrade] = useState(5);
 
-  // Calculate derived values based on class and grade
+  // Query stellar properties from database with reactive updates
+  const stellarProperty = useLiveQuery(
+    () =>
+      getStellarProperty(
+        selectedClass as StellarClassType,
+        classGrade as StellarGrade
+      ),
+    [selectedClass, classGrade]
+  );
+
+  // Derived star data for display
   const starData = useMemo(() => {
-    const classInfo = STAR_CLASS_INFO[selectedClass];
-    const mass = STELLAR_MASS[selectedClass][classGrade];
-    const luminosity = STELLAR_LUMINOSITY[selectedClass][classGrade];
+    if (!stellarProperty) {
+      // Loading state or error
+      return null;
+    }
 
     return {
-      ...classInfo,
-      mass,
-      luminosity,
+      color: stellarProperty.color,
+      description: stellarProperty.description,
+      temperature: stellarProperty.temperatureRange,
+      mass: stellarProperty.mass,
+      luminosity: stellarProperty.luminosity,
     };
-  }, [selectedClass, classGrade]);
+  }, [stellarProperty]);
+
+  // Check if database is still initializing
+  const isLoading = stellarProperty === undefined;
 
   // Format large numbers for display
   const formatNumber = (num: number): string => {
@@ -129,12 +79,8 @@ export function CreatePrimaryStar() {
       return (num / 1000000).toFixed(2) + "M";
     } else if (num >= 1000) {
       return (num / 1000).toFixed(2) + "K";
-    } else if (num >= 10) {
-      return num.toFixed(2);
-    } else if (num >= 1) {
-      return num.toFixed(3);
     } else {
-      return num.toFixed(4);
+      return num.toFixed(2);
     }
   };
 
@@ -248,16 +194,26 @@ export function CreatePrimaryStar() {
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header Section */}
         <div className="mb-8">
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-2">
-            Creating your Primary Star
-          </h1>
-          <p className="text-muted-foreground">
-            Configure the primary star for your system. Press{" "}
-            <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500">
-              R
-            </kbd>{" "}
-            for random generation.
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-2">
+                Creating your Primary Star
+              </h1>
+              <p className="text-muted-foreground">
+                Configure the primary star for your system. Press{" "}
+                <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500">
+                  R
+                </kbd>{" "}
+                for random generation.
+              </p>
+            </div>
+            {isLoading && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />
+                Loading stellar data...
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Main Content */}
@@ -355,12 +311,12 @@ export function CreatePrimaryStar() {
                         onClick={() => handleClassSelect(starClass)}
                       >
                         {starClass}
-                        {selectedClass === starClass && (
+                        {selectedClass === starClass && starData && (
                           <Badge
                             variant="secondary"
                             className="absolute top-2 right-2 text-xs"
                           >
-                            {STAR_CLASS_INFO[starClass].color}
+                            {starData.color}
                           </Badge>
                         )}
                       </Button>
@@ -368,13 +324,19 @@ export function CreatePrimaryStar() {
                     <TooltipContent>
                       <div className="space-y-1">
                         <p className="font-semibold">
-                          {STAR_CLASS_INFO[starClass].color}
+                          {selectedClass === starClass && starData
+                            ? starData.color
+                            : "Loading..."}
                         </p>
                         <p className="text-sm">
-                          {STAR_CLASS_INFO[starClass].description}
+                          {selectedClass === starClass && starData
+                            ? starData.description
+                            : ""}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {STAR_CLASS_INFO[starClass].temperature}
+                          {selectedClass === starClass && starData
+                            ? starData.temperature
+                            : ""}
                         </p>
                       </div>
                     </TooltipContent>
@@ -399,21 +361,29 @@ export function CreatePrimaryStar() {
                     Class {selectedClass}
                     {classGrade}
                   </h3>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    {starData.description}
-                  </p>
-                  <div className="flex gap-4 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Color:</span>{" "}
-                      <span className="font-medium">{starData.color}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Temp:</span>{" "}
-                      <span className="font-medium">
-                        {starData.temperature}
-                      </span>
-                    </div>
-                  </div>
+                  {starData ? (
+                    <>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        {starData.description}
+                      </p>
+                      <div className="flex gap-4 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">Color:</span>{" "}
+                          <span className="font-medium">{starData.color}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Temp:</span>{" "}
+                          <span className="font-medium">
+                            {starData.temperature}
+                          </span>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Loading stellar data...
+                    </p>
+                  )}
                 </div>
               </div>
             </Card>
@@ -472,45 +442,55 @@ export function CreatePrimaryStar() {
             <div>
               <Label className="text-base mb-3">Stellar Properties</Label>
               <Card className="p-6">
-                <div className="space-y-4">
-                  {/* Color */}
-                  <div className="flex justify-between items-center pb-3 border-b">
-                    <span className="text-sm text-muted-foreground">Color</span>
-                    <span className="font-semibold text-lg">
-                      {starData.color}
-                    </span>
-                  </div>
+                {starData ? (
+                  <div className="space-y-4">
+                    {/* Color */}
+                    <div className="flex justify-between items-center pb-3 border-b">
+                      <span className="text-sm text-muted-foreground">
+                        Color
+                      </span>
+                      <span className="font-semibold text-lg">
+                        {starData.color}
+                      </span>
+                    </div>
 
-                  {/* Mass */}
-                  <div className="flex justify-between items-center pb-3 border-b">
-                    <span className="text-sm text-muted-foreground">Mass</span>
-                    <span className="font-semibold text-lg">
-                      {starData.mass.toFixed(2)}{" "}
-                      <span className="text-sm font-normal">M☉</span>
-                    </span>
-                  </div>
+                    {/* Mass */}
+                    <div className="flex justify-between items-center pb-3 border-b">
+                      <span className="text-sm text-muted-foreground">
+                        Mass
+                      </span>
+                      <span className="font-semibold text-lg">
+                        {starData.mass.toFixed(2)}{" "}
+                        <span className="text-sm font-normal">M☉</span>
+                      </span>
+                    </div>
 
-                  {/* Luminosity */}
-                  <div className="flex justify-between items-center pb-3 border-b">
-                    <span className="text-sm text-muted-foreground">
-                      Luminosity
-                    </span>
-                    <span className="font-semibold text-lg">
-                      {formatNumber(starData.luminosity)}{" "}
-                      <span className="text-sm font-normal">L☉</span>
-                    </span>
-                  </div>
+                    {/* Luminosity */}
+                    <div className="flex justify-between items-center pb-3 border-b">
+                      <span className="text-sm text-muted-foreground">
+                        Luminosity
+                      </span>
+                      <span className="font-semibold text-lg">
+                        {formatNumber(starData.luminosity)}{" "}
+                        <span className="text-sm font-normal">L☉</span>
+                      </span>
+                    </div>
 
-                  {/* Temperature */}
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">
-                      Temperature
-                    </span>
-                    <span className="font-semibold text-sm">
-                      {starData.temperature}
-                    </span>
+                    {/* Temperature */}
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">
+                        Temperature
+                      </span>
+                      <span className="font-semibold text-sm">
+                        {starData.temperature}
+                      </span>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="text-center text-muted-foreground py-8">
+                    Loading properties...
+                  </div>
+                )}
               </Card>
             </div>
 
