@@ -1,4 +1,12 @@
-import type { DiceRollResult } from '@/lib/types/star-system';
+/**
+ * Result of a dice roll including individual dice and metadata
+ */
+export interface DiceRollResult {
+  total: number;
+  dice: number[];
+  advantage: number;
+  disadvantage: number;
+}
 
 /**
  * Roll a single die with specified number of sides
@@ -37,9 +45,12 @@ function rollWithAdvantage(
   if (netAdvantage === 0) {
     // Standard roll, no advantage/disadvantage
     const rolls = rollMultipleDice(dice, sides);
+
     return {
       total: rolls.reduce((sum, val) => sum + val, 0),
       dice: rolls,
+      advantage: 0,
+      disadvantage: 0,
     };
   }
   
@@ -58,7 +69,9 @@ function rollWithAdvantage(
       total: kept.reduce((sum, val) => sum + val, 0),
       dice: rolls,
       advantage: netAdvantage,
+      disadvantage: 0,
     };
+
   } else {
     // Roll with disadvantage: drop highest dice
     const totalDice = dice + Math.abs(netAdvantage);
@@ -73,6 +86,7 @@ function rollWithAdvantage(
     return {
       total: kept.reduce((sum, val) => sum + val, 0),
       dice: rolls,
+      advantage: 0,
       disadvantage: Math.abs(netAdvantage),
     };
   }
