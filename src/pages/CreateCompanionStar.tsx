@@ -7,6 +7,7 @@ import {
   AlertCircle,
   Info,
   Sparkles,
+  Dices,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +37,16 @@ import {
 } from "@/components/ui/tooltip";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Slider } from "@/components/ui/slider";
+import { generateCompanionStars } from "@/lib/generators/companionStarGenerator";
+import type { StellarClass, StellarGrade } from "@/models/stellar/types/enums";
+import { GenerationMethod } from "@/models/common/types";
+import type { StellarZones } from "@/models/stellar/types/interface";
+import { StellarZonesDisplay } from "@/components/stellar/StellarZonesDisplay";
+import {
+  calculateStellarZonesFromClassGrade,
+  validateCompanionOrbit,
+  calculateStablePlanetaryOrbitLimit,
+} from "@/lib/stellar/zoneCalculations";
 
 // TypeScript types
 type StarClass = "O" | "B" | "A" | "F" | "G" | "K" | "M" | "Random";
@@ -50,14 +61,24 @@ type LuminosityClass =
   | "Random";
 type SystemType = "Binary" | "Trinary" | "Quaternary";
 
+interface CompanionDiceRolls {
+  companionRoll: number;
+  classRoll?: number;
+  gradeRoll?: number;
+  orbitRoll: number;
+}
+
 interface Companion {
-  id: number;
+  id: number | string;
   name: string;
   class: StarClass | null;
+  grade?: number;
   luminosity: LuminosityClass;
   orbitalDistance: number;
   mass: number | null;
   age: number | null;
+  generationMethod?: GenerationMethod;
+  diceRolls?: CompanionDiceRolls;
 }
 
 interface LayoutContext {
@@ -106,6 +127,10 @@ export function CreateCompanionStar() {
   const [companions, setCompanions] = useState<Companion[]>([]);
   const [isRenameOpen, setIsRenameOpen] = useState(false);
   const [renameValue, setRenameValue] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [primaryZones, setPrimaryZones] = useState<StellarZones | null>(null);
+  const [orbitWarnings, setOrbitWarnings] = useState<string[]>([]);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   const starClasses: StarClass[] = [
     "O",
@@ -169,6 +194,62 @@ export function CreateCompanionStar() {
     setCompanions(updated);
   };
 
+  // Generate companions procedurally based on primary star
+  const handleGenerateProcedurally = async () => {
+    setIsGenerating(true);
+    try {
+      // Load primary star data from localStorage
+      const primaryStarData = localStorage.getItem("primaryStar");
+      if (!primaryStarData) {
+        alert("No primary star found. Please create a primary star first.");
+        return;
+      }
+
+      const primaryStar = JSON.parse(primaryStarData);
+      const primaryClass = primaryStar.class as StellarClass;
+      const primaryGrade = primaryStar.grade as StellarGrade;
+
+      // Generate companions
+      const result = await generateCompanionStars(primaryClass, primaryGrade);
+
+      if (result.companions.length === 0) {
+        alert("No companion stars were generated. Try again or add manually.");
+        return;
+      }
+
+      // Convert generated companions to UI format
+      const newCompanions: Companion[] = result.companions.map((comp) => ({
+        id: comp.id,
+        name: comp.name,
+        class: comp.stellarClass as StarClass,
+        grade: comp.stellarGrade,
+        luminosity: "V" as LuminosityClass, // Main sequence by default
+        orbitalDistance: Math.round(comp.orbitalDistance * 10) / 10, // Round to 1 decimal
+        mass: comp.mass ?? null,
+        age: null,
+        generationMethod: comp.generationMethod,
+        diceRolls: comp.diceRolls,
+      }));
+
+      // Update system type based on number of companions
+      if (newCompanions.length === 1) {
+        setSystemType("Binary");
+      } else if (newCompanions.length === 2) {
+        setSystemType("Trinary");
+      } else if (newCompanions.length === 3) {
+        setSystemType("Quaternary");
+      }
+
+      setCompanions(newCompanions);
+      setActiveCompanion(0);
+    } catch (error) {
+      console.error("Failed to generate companions:", error);
+      alert("Failed to generate companions. Please try again or add manually.");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const addCompanion = () => {
     if (companions.length >= maxCompanions) return;
 
@@ -180,6 +261,7 @@ export function CreateCompanionStar() {
       orbitalDistance: 50,
       mass: null,
       age: null,
+      generationMethod: GenerationMethod.CUSTOM,
     };
     setCompanions([...companions, newCompanion]);
     setActiveCompanion(companions.length);
@@ -252,7 +334,57 @@ export function CreateCompanionStar() {
         console.error("Failed to load saved companion data", e);
       }
     }
+    setIsInitialized(true);
   }, []);
+
+  // Auto-save data whenever companions or systemType changes
+  useEffect(() => {
+    if (isInitialized) {
+      const companionData = {
+        systemType,
+        companions,
+      };
+      localStorage.setItem("companionStars", JSON.stringify(companionData));
+    }
+  }, [systemType, companions, isInitialized]);
+
+  // Load primary star zones on mount
+  useEffect(() => {
+    const loadPrimaryZones = async () => {
+      try {
+        const primaryStarData = localStorage.getItem("primaryStar");
+        if (!primaryStarData) {
+          console.warn("No primary star data found");
+          return;
+        }
+
+        const primaryStar = JSON.parse(primaryStarData);
+        const primaryClass = primaryStar.class as StellarClass;
+        const primaryGrade = primaryStar.grade as StellarGrade;
+
+        const zones = await calculateStellarZonesFromClassGrade(primaryClass, primaryGrade);
+        setPrimaryZones(zones);
+      } catch (error) {
+        console.error("Failed to load primary star zones:", error);
+      }
+    };
+
+    loadPrimaryZones();
+  }, []);
+
+  // Validate orbital distance when it changes
+  useEffect(() => {
+    if (activeCompanion === null || !primaryZones) {
+      setOrbitWarnings([]);
+      return;
+    }
+
+    const companion = companions[activeCompanion];
+    if (!companion) return;
+
+    const validation = validateCompanionOrbit(companion.orbitalDistance, primaryZones);
+    setOrbitWarnings(validation.warnings);
+  }, [activeCompanion, companions, primaryZones]);
 
   const status = getCompletionStatus();
   const canAddMore = companions.length < maxCompanions;
@@ -308,6 +440,25 @@ export function CreateCompanionStar() {
                     </SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="pr-8">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="secondary"
+                      className="w-full"
+                      onClick={handleGenerateProcedurally}
+                      disabled={isGenerating}
+                    >
+                      <Dices className="h-4 w-4 mr-2" />
+                      {isGenerating ? "Generating..." : "Generate Procedurally"}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Generate companion stars based on Mneme rules</p>
+                  </TooltipContent>
+                </Tooltip>
               </div>
 
               <div className="space-y-2 flex-1">
@@ -380,14 +531,22 @@ export function CreateCompanionStar() {
                       Configure companion star properties
                     </p>
                   </div>
-                  {isCompanionComplete(activeCompanionData) ? (
-                    <Badge variant="default" className="gap-1">
-                      <Sparkles className="h-3 w-3" />
-                      Complete
-                    </Badge>
-                  ) : (
-                    <Badge variant="secondary">Incomplete</Badge>
-                  )}
+                  <div className="flex gap-2">
+                    {activeCompanionData.generationMethod === GenerationMethod.PROCEDURAL && (
+                      <Badge variant="outline" className="gap-1">
+                        <Dices className="h-3 w-3" />
+                        Procedural
+                      </Badge>
+                    )}
+                    {isCompanionComplete(activeCompanionData) ? (
+                      <Badge variant="default" className="gap-1">
+                        <Sparkles className="h-3 w-3" />
+                        Complete
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary">Incomplete</Badge>
+                    )}
+                  </div>
                 </div>
 
                 <Separator />
@@ -467,13 +626,42 @@ export function CreateCompanionStar() {
                                     .temp
                                 }
                               </p>
+                              {activeCompanionData.grade !== undefined && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Grade: {activeCompanionData.grade}
+                                </p>
+                              )}
                             </div>
                             <Badge variant="outline" className="font-mono">
                               {activeCompanionData.class}
+                              {activeCompanionData.grade !== undefined && activeCompanionData.grade}
                             </Badge>
                           </div>
                         </div>
                       )}
+
+                    {/* Show dice rolls if procedurally generated */}
+                    {activeCompanionData.diceRolls && (
+                      <div className="mt-4 p-3 bg-muted/50 rounded-lg border">
+                        <p className="text-xs font-semibold text-muted-foreground mb-2">
+                          Generation Rolls
+                        </p>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div>
+                            <span className="text-muted-foreground">Companion:</span>{" "}
+                            <span className="font-mono font-semibold">
+                              {activeCompanionData.diceRolls.companionRoll}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground">Orbit:</span>{" "}
+                            <span className="font-mono font-semibold">
+                              {activeCompanionData.diceRolls.orbitRoll}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
 
@@ -560,6 +748,30 @@ export function CreateCompanionStar() {
                         <span>50 AU</span>
                         <span>100 AU</span>
                       </div>
+
+                      {/* Orbital warnings */}
+                      {orbitWarnings.length > 0 && (
+                        <Alert className="mt-3">
+                          <AlertCircle className="h-4 w-4" />
+                          <AlertDescription>
+                            <ul className="list-disc list-inside space-y-1">
+                              {orbitWarnings.map((warning, idx) => (
+                                <li key={idx} className="text-sm">{warning}</li>
+                              ))}
+                            </ul>
+                          </AlertDescription>
+                        </Alert>
+                      )}
+
+                      {/* Stable planetary orbit limit */}
+                      {primaryZones && (
+                        <div className="mt-3 p-2 bg-muted/50 rounded text-xs text-muted-foreground">
+                          <p>
+                            <strong>Stable Planetary Orbits:</strong> Planets can orbit the primary
+                            within ~{calculateStablePlanetaryOrbitLimit(activeCompanionData.orbitalDistance).toFixed(1)} AU
+                          </p>
+                        </div>
+                      )}
                     </div>
 
                     <Separator />
@@ -637,6 +849,12 @@ export function CreateCompanionStar() {
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* Stellar Zones Display */}
+                <StellarZonesDisplay
+                  zones={primaryZones}
+                  companionDistance={activeCompanionData.orbitalDistance}
+                />
               </div>
             ) : (
               <div className="flex items-center justify-center h-full p-8">

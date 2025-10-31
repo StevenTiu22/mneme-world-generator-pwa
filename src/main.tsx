@@ -11,7 +11,6 @@ document.title = "Mneme World Generator";
 
 const root = document.getElementById("root")!;
 
-// Render app immediately - don't block user
 createRoot(root).render(
   <StrictMode>
     <ThemeProvider defaultTheme="dark" storageKey="mneme-theme">
@@ -22,19 +21,14 @@ createRoot(root).render(
   </StrictMode>
 );
 
-// Initialize database in the background (non-blocking)
-// This allows the app to render immediately while the database loads
 initializeDatabase()
   .then(() => {
     console.log("🌟 Database initialized successfully");
-    // Preload common stellar properties for better performance
     return preloadCommonStellarProperties();
   })
   .then(() => {
-    console.log("✅ Ready for stellar operations");
+    console.log("[INFO] Ready for stellar operations");
   })
   .catch((error) => {
-    console.error("❌ Database initialization failed:", error);
-    // Database errors are non-critical - components will handle them gracefully
-    // Users can still use the app for other features
+    console.error("[ERROR] Database initialization failed:", error);
   });
