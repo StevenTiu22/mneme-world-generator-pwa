@@ -36,3 +36,27 @@ export interface StarData {
     updatedAt: string;
     createdBy: string;
 }
+
+/**
+ * StarSystem - Groups a primary star with its companion stars
+ * This represents a complete star system that can be saved/exported
+ */
+export interface StarSystem {
+    id: string;
+    name: string;
+    primaryStar: StarData;
+    companionStars: StarData[];
+    createdAt: string;
+    updatedAt: string;
+    createdBy: string;
+}
+
+/**
+ * Export metadata for star system files
+ * Includes version info for future compatibility
+ */
+export interface StarSystemExport {
+    version: string;
+    exportDate: string;
+    system: StarSystem;
+}

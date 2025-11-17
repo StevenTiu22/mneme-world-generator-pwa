@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,8 +24,23 @@ import {
   Link2,
   Wrench,
   Pencil,
-  Download,
+  Upload,
+  FileJson,
+  FileSpreadsheet,
 } from "lucide-react";
+import type { StarData, StarSystem } from "@/models/stellar/types/interface";
+import {
+  STELLAR_MASS,
+  STELLAR_LUMINOSITY,
+} from "@/models/stellar/data/constants";
+import type { StellarClass, StellarGrade } from "@/models/stellar/types/enums";
+import { GenerationMethod } from "@/models/common/types";
+import {
+  downloadStarSystemAsJSON,
+  downloadStarSystemAsCSV,
+} from "@/lib/export/starExport";
+import { importStarSystemFromFile } from "@/lib/import/starImport";
+import { generateSystemId } from "@/lib/db/queries/starQueries";
 
 interface SavedWorld {
   id: string;
@@ -57,6 +72,8 @@ export function MyWorlds() {
   const [sortBy, setSortBy] = useState<SortOption>("oldest");
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState("");
+  const [importError, setImportError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load saved worlds from localStorage
   useEffect(() => {
@@ -66,16 +83,16 @@ export function MyWorlds() {
   const loadWorlds = () => {
     const sampleWorlds: SavedWorld[] = [];
 
-    const primaryStar = localStorage.getItem("primaryStar");
+    const primaryStarRaw = localStorage.getItem("primaryStar");
     const mainWorld = localStorage.getItem("mainWorld");
     const companionStars = localStorage.getItem("companionStars");
     const worldContext = localStorage.getItem("worldContext");
     const habitability = localStorage.getItem("habitability");
     const position = localStorage.getItem("position");
 
-    if (primaryStar && mainWorld) {
+    if (primaryStarRaw && mainWorld) {
       try {
-        const starData = JSON.parse(primaryStar);
+        const starData = JSON.parse(primaryStarRaw);
         const worldData = JSON.parse(mainWorld);
         const companionData = companionStars
           ? JSON.parse(companionStars)
@@ -84,14 +101,41 @@ export function MyWorlds() {
         const habitabilityData = habitability ? JSON.parse(habitability) : null;
         const positionData = position ? JSON.parse(position) : null;
 
+        // Handle both old format (class/grade) and new format (stellarClass/stellarGrade)
+        let stellarClass: StellarClass;
+        let stellarGrade: StellarGrade;
+        let starName: string;
+        let createdAtDate: string;
+        let updatedAtDate: string;
+
+        if ("stellarClass" in starData) {
+          // New StarData format
+          stellarClass = starData.stellarClass;
+          stellarGrade = starData.stellarGrade;
+          starName = starData.name;
+          createdAtDate = new Date(starData.createdAt).toLocaleString();
+          updatedAtDate = new Date(starData.updatedAt).toLocaleString();
+        } else {
+          // Old format
+          stellarClass = starData.class as StellarClass;
+          stellarGrade = starData.grade as StellarGrade;
+          starName = starData.name || "Star A9";
+          createdAtDate = "01/01/2025, 12:00 AM";
+          updatedAtDate = "01/02/2025, 1:00 AM";
+        }
+
+        // Get actual stellar properties from lookup tables
+        const mass = STELLAR_MASS[stellarClass][stellarGrade];
+        const luminosity = STELLAR_LUMINOSITY[stellarClass][stellarGrade];
+
         sampleWorlds.push({
-          id: "world-1",
-          name: "World #1",
+          id: starData.id || "world-1",
+          name: starName || "World #1",
           primaryStar: {
-            name: starData.name || "Star A9",
-            class: starData.class || "A9",
-            luminosity: `${starData.luminosity || "1.0"} L☉`,
-            mass: `${starData.mass || "1.0"} M☉`,
+            name: starName,
+            class: `${stellarClass}${stellarGrade}`,
+            luminosity: `${luminosity.toFixed(2)} L☉`,
+            mass: `${mass.toFixed(2)} M☉`,
           },
           mainWorld: {
             type: worldData.type || "Habitat",
@@ -108,8 +152,8 @@ export function MyWorlds() {
           position: positionData
             ? `${(positionData.auDistance / 20).toFixed(2)} AU`
             : "1.0 AU",
-          createdAt: "01/01/2025, 12:00 AM",
-          lastModified: "01/02/2025, 1:00 AM",
+          createdAt: createdAtDate,
+          lastModified: updatedAtDate,
         });
       } catch (e) {
         console.error("Failed to load world data", e);
@@ -133,15 +177,117 @@ export function MyWorlds() {
     }
   };
 
-  const handleExportWorld = (world: SavedWorld) => {
-    const dataStr = JSON.stringify(world, null, 2);
-    const dataBlob = new Blob([dataStr], { type: "application/json" });
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${world.name.replace(/\s+/g, "-").toLowerCase()}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
+  // Create a StarSystem object from localStorage data for export
+  const createStarSystemFromLocalStorage = (): StarSystem | null => {
+    const primaryStarRaw = localStorage.getItem("primaryStar");
+    if (!primaryStarRaw) return null;
+
+    try {
+      const starData = JSON.parse(primaryStarRaw);
+
+      // Ensure we have the new format
+      let primaryStar: StarData;
+      if ("stellarClass" in starData) {
+        primaryStar = starData as StarData;
+      } else {
+        // Convert old format to new
+        const now = new Date().toISOString();
+        primaryStar = {
+          id: `star_${Date.now().toString(36)}`,
+          name: starData.name || "Primary Star",
+          stellarClass: starData.class,
+          stellarGrade: starData.grade,
+          generationMethod: GenerationMethod.CUSTOM,
+          createdAt: now,
+          updatedAt: now,
+          createdBy: "user",
+        } as StarData;
+      }
+
+      const system: StarSystem = {
+        id: generateSystemId(),
+        name: primaryStar.name,
+        primaryStar,
+        companionStars: [], // TODO: Load companion stars when implemented
+        createdAt: primaryStar.createdAt,
+        updatedAt: primaryStar.updatedAt,
+        createdBy: primaryStar.createdBy,
+      };
+
+      return system;
+    } catch (e) {
+      console.error("Failed to create star system from localStorage", e);
+      return null;
+    }
+  };
+
+  const handleExportJSON = () => {
+    const system = createStarSystemFromLocalStorage();
+    if (system) {
+      downloadStarSystemAsJSON(system);
+    } else {
+      setImportError("No star system data found to export");
+    }
+  };
+
+  const handleExportCSV = () => {
+    const system = createStarSystemFromLocalStorage();
+    if (system) {
+      downloadStarSystemAsCSV(system);
+    } else {
+      setImportError("No star system data found to export");
+    }
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileImport = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setImportError(null);
+
+    const result = await importStarSystemFromFile(file);
+
+    if (result.success && result.data) {
+      // Save imported system to localStorage
+      localStorage.setItem(
+        "primaryStar",
+        JSON.stringify(result.data.primaryStar)
+      );
+
+      if (result.warnings.length > 0) {
+        console.warn("Import warnings:", result.warnings);
+      }
+
+      // Reload worlds to show the imported data
+      loadWorlds();
+
+      alert(
+        `Successfully imported star system: ${result.data.name}\n${
+          result.warnings.length > 0
+            ? `\nWarnings:\n${result.warnings.join("\n")}`
+            : ""
+        }`
+      );
+    } else {
+      setImportError(
+        `Import failed:\n${result.errors.join("\n")}${
+          result.warnings.length > 0
+            ? `\n\nWarnings:\n${result.warnings.join("\n")}`
+            : ""
+        }`
+      );
+    }
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   const handleSaveName = () => {
@@ -159,14 +305,46 @@ export function MyWorlds() {
 
   return (
     <div className="container max-w-7xl mx-auto px-4 py-8">
+      {/* Hidden file input for imports */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileImport}
+        accept=".json,.csv"
+        className="hidden"
+      />
+
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-4xl font-bold">My Saved Worlds</h1>
-        <Button onClick={() => navigate("/create-new")} size="lg">
-          <Plus className="h-5 w-5 mr-2" />
-          Add New World
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button onClick={handleImportClick} variant="outline" size="lg">
+            <Upload className="h-5 w-5 mr-2" />
+            Import
+          </Button>
+          <Button onClick={() => navigate("/create-new")} size="lg">
+            <Plus className="h-5 w-5 mr-2" />
+            Add New World
+          </Button>
+        </div>
       </div>
+
+      {/* Import Error Display */}
+      {importError && (
+        <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+          <p className="text-sm text-destructive whitespace-pre-line">
+            {importError}
+          </p>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="mt-2"
+            onClick={() => setImportError(null)}
+          >
+            Dismiss
+          </Button>
+        </div>
+      )}
 
       {/* Sort Controls */}
       <div className="mb-6">
@@ -386,15 +564,15 @@ export function MyWorlds() {
                 </CardContent>
               </Card>
 
-              {/* Export Button */}
-              <div className="flex justify-end mt-6">
-                <Button
-                  onClick={() => handleExportWorld(selectedWorld)}
-                  variant="default"
-                  size="lg"
-                >
-                  <Download className="h-5 w-5 mr-2" />
-                  Export to JSON
+              {/* Export Buttons */}
+              <div className="flex justify-end gap-3 mt-6">
+                <Button onClick={handleExportJSON} variant="default" size="lg">
+                  <FileJson className="h-5 w-5 mr-2" />
+                  Export JSON
+                </Button>
+                <Button onClick={handleExportCSV} variant="outline" size="lg">
+                  <FileSpreadsheet className="h-5 w-5 mr-2" />
+                  Export CSV
                 </Button>
               </div>
             </div>
