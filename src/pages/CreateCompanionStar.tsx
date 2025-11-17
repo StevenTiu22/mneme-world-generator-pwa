@@ -8,6 +8,7 @@ import {
   Info,
   Sparkles,
   Dices,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -84,6 +85,7 @@ interface Companion {
 interface LayoutContext {
   setNextDisabled: (disabled: boolean) => void;
   setNextHandler: (handler: () => void) => void;
+  setFinishHandler?: (handler: () => void) => void;
 }
 
 // Star class info for better UX
@@ -206,8 +208,8 @@ export function CreateCompanionStar() {
       }
 
       const primaryStar = JSON.parse(primaryStarData);
-      const primaryClass = primaryStar.class as StellarClass;
-      const primaryGrade = primaryStar.grade as StellarGrade;
+      const primaryClass = primaryStar.stellarClass as StellarClass;
+      const primaryGrade = primaryStar.stellarGrade as StellarGrade;
 
       // Generate companions
       const result = await generateCompanionStars(primaryClass, primaryGrade);
@@ -300,17 +302,17 @@ export function CreateCompanionStar() {
     return { configured, total: companions.length };
   };
 
-  // Handler for Next button
-  const handleNext = useCallback(() => {
+  // Handler for finishing world creation
+  const handleFinish = useCallback(() => {
     const companionData = {
       systemType,
       companions,
     };
     localStorage.setItem("companionStars", JSON.stringify(companionData));
-    navigate("../main-world");
+    navigate("/my-worlds");
   }, [navigate, systemType, companions]);
 
-  // Update Next button state based on completion
+  // Update button handlers
   useEffect(() => {
     if (context) {
       const hasCompanions = companions.length > 0;
@@ -318,9 +320,14 @@ export function CreateCompanionStar() {
       const canProceed = !hasCompanions || hasConfiguredCompanion;
 
       context.setNextDisabled(!canProceed);
-      context.setNextHandler(() => handleNext);
+      context.setNextHandler(() => handleFinish);
+
+      // Set finish handler for the layout's Finish button
+      if (context.setFinishHandler) {
+        context.setFinishHandler(() => handleFinish);
+      }
     }
-  }, [handleNext, context, companions]);
+  }, [handleFinish, context, companions]);
 
   // Load saved data on mount
   useEffect(() => {
@@ -359,8 +366,8 @@ export function CreateCompanionStar() {
         }
 
         const primaryStar = JSON.parse(primaryStarData);
-        const primaryClass = primaryStar.class as StellarClass;
-        const primaryGrade = primaryStar.grade as StellarGrade;
+        const primaryClass = primaryStar.stellarClass as StellarClass;
+        const primaryGrade = primaryStar.stellarGrade as StellarGrade;
 
         const zones = await calculateStellarZonesFromClassGrade(primaryClass, primaryGrade);
         setPrimaryZones(zones);
@@ -463,43 +470,40 @@ export function CreateCompanionStar() {
 
               <div className="space-y-2 flex-1">
                 {companions.map((companion, index) => (
-                  <Button
+                  <div
                     key={companion.id}
                     onClick={() => setActiveCompanion(index)}
-                    variant={activeCompanion === index ? "default" : "outline"}
-                    className={`w-full justify-between h-auto py-3 text-left font-normal ${
+                    className={`w-full flex justify-between items-center h-auto py-3 text-left font-normal cursor-pointer rounded-md border transition-colors ${
                       activeCompanion === index
-                        ? "rounded-l-md rounded-r-none"
-                        : "mr-8 pr-8"
+                        ? "bg-primary text-primary-foreground rounded-l-md rounded-r-none border-primary"
+                        : "bg-background hover:bg-accent hover:text-accent-foreground mr-8 pr-8 border-input"
                     }`}
                   >
-                    <span className="flex items-center gap-2">
+                    <span className="flex items-center gap-2 pl-4">
                       {companion.name}
                       {!isCompanionComplete(companion) && (
                         <span className="text-xs opacity-60">(incomplete)</span>
                       )}
                     </span>
                     {activeCompanion === index && (
-                      <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 hover:bg-background/20"
+                      <div className="flex gap-1 pr-2">
+                        <button
+                          type="button"
+                          className="inline-flex items-center justify-center h-6 w-6 rounded-md hover:bg-background/20"
                           onClick={(e) => openRenameDialog(e, index)}
                         >
                           <Pencil className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 hover:bg-background/20"
+                        </button>
+                        <button
+                          type="button"
+                          className="inline-flex items-center justify-center h-6 w-6 rounded-md hover:bg-background/20"
                           onClick={(e) => removeCompanion(e, index)}
                         >
                           <Trash2 className="h-3 w-3" />
-                        </Button>
+                        </button>
                       </div>
                     )}
-                  </Button>
+                  </div>
                 ))}
               </div>
 
@@ -877,11 +881,12 @@ export function CreateCompanionStar() {
                         </p>
                       </div>
                       <Button
-                        variant="outline"
-                        onClick={() => navigate("../main-world")}
+                        variant="default"
+                        onClick={handleFinish}
                         className="mt-4"
                       >
-                        Skip to Main World
+                        <Check className="h-4 w-4 mr-2" />
+                        Finish & Save World
                       </Button>
                     </div>
                   </CardContent>

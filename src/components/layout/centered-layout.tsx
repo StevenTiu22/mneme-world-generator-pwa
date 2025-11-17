@@ -1,5 +1,5 @@
 import { Link, Outlet, useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 
@@ -7,12 +7,14 @@ import { useState, useEffect } from "react";
 export interface CenteredLayoutContext {
   setNextDisabled: (disabled: boolean) => void;
   setNextHandler: (handler: () => void) => void;
+  setFinishHandler?: (handler: () => void) => void;
 }
 
 // Navigation route configuration
 interface RouteConfig {
   showPrevious: boolean;
   showNext: boolean;
+  showFinish?: boolean;
   previousPath?: string;
   nextPath?: string;
 }
@@ -35,7 +37,8 @@ const ROUTE_CONFIG: Record<string, RouteConfig> = {
   },
   "/create-new/companion-star": {
     showPrevious: true,
-    showNext: true,
+    showNext: false,
+    showFinish: true,
     previousPath: "/create-new/world-context",
   },
   "/create-new/main-world": {
@@ -70,6 +73,7 @@ export function CenteredLayout() {
   const location = useLocation();
   const [nextDisabled, setNextDisabled] = useState(true);
   const [nextHandler, setNextHandler] = useState<() => void>(() => () => {});
+  const [finishHandler, setFinishHandler] = useState<() => void>(() => () => {});
   const [showButtons, setShowButtons] = useState(false);
 
   const navConfig: RouteConfig = ROUTE_CONFIG[location.pathname] || {
@@ -131,6 +135,12 @@ export function CenteredLayout() {
     }
   };
 
+  const handleFinish = () => {
+    if (finishHandler) {
+      finishHandler();
+    }
+  };
+
   return (
     <div className="relative min-h-screen bg-background">
       {/* Sticky Back to Home link */}
@@ -148,11 +158,13 @@ export function CenteredLayout() {
 
       {/* Main content area with centered content */}
       <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 pb-32">
-        <Outlet context={{ setNextDisabled, setNextHandler }} />
+        <div className="w-full">
+          <Outlet context={{ setNextDisabled, setNextHandler, setFinishHandler }} />
+        </div>
       </div>
 
       {/* Fixed navigation buttons at bottom right - only visible when scrolled to bottom */}
-      {(navConfig.showPrevious || navConfig.showNext) && (
+      {(navConfig.showPrevious || navConfig.showNext || navConfig.showFinish) && (
         <div
           className={`fixed bottom-8 right-8 z-40 flex gap-4 transition-all duration-300 ${
             showButtons
@@ -181,6 +193,16 @@ export function CenteredLayout() {
             >
               Next
               <ArrowRight className="h-4 w-4" />
+            </Button>
+          )}
+          {navConfig.showFinish && (
+            <Button
+              size="lg"
+              onClick={handleFinish}
+              className="gap-2 shadow-lg"
+            >
+              <Check className="h-4 w-4" />
+              Finish & Save
             </Button>
           )}
         </div>

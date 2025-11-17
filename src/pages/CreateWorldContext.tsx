@@ -70,8 +70,8 @@ const TECH_LEVELS = [
 
 interface PrimaryStarData {
   name: string;
-  class: StellarClass;
-  grade: StellarGrade;
+  stellarClass: StellarClass;
+  stellarGrade: StellarGrade;
 }
 
 interface CompanionStarData {
@@ -113,7 +113,7 @@ export function CreateWorldContext() {
   const stellarProperty = useLiveQuery(
     () => {
       if (!primaryStar) return null;
-      return getStellarProperty(primaryStar.class, primaryStar.grade);
+      return getStellarProperty(primaryStar.stellarClass, primaryStar.stellarGrade);
     },
     [primaryStar]
   );
@@ -143,7 +143,7 @@ export function CreateWorldContext() {
         setPrimaryStar(data);
 
         // Calculate zones
-        const zones = await calculateStellarZonesFromClassGrade(data.class, data.grade);
+        const zones = await calculateStellarZonesFromClassGrade(data.stellarClass, data.stellarGrade);
         setPrimaryZones(zones);
         setIsLoadingZones(false);
       } catch (error) {
@@ -207,7 +207,7 @@ export function CreateWorldContext() {
   }, [techLevel, handleNext, context]);
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 py-16">
+    <div className="w-full max-w-screen-2xl mx-auto px-4 py-8">
       {/* Header */}
       <div className="text-center mb-8">
         <h1 className="text-3xl font-bold mb-2">World Context Profile</h1>
@@ -216,254 +216,254 @@ export function CreateWorldContext() {
         </p>
       </div>
 
-      {/* Two-column layout on desktop */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* LEFT COLUMN */}
-        <div className="space-y-6">
+      {/* Three-row layout */}
+      <div className="space-y-8">
+        {/* ROW 1: Primary Star Info and Tech Level */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Primary Star Info */}
           {primaryStar && (
             <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Star className="h-5 w-5" />
-              Primary Star: {primaryStar.name}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Stellar Classification</p>
-                <p className="text-lg font-semibold font-mono">
-                  {primaryStar.class}{primaryStar.grade}
-                </p>
-              </div>
-              {stellarProperty && (
-                <>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Star className="h-5 w-5" />
+                  Primary Star: {primaryStar.name}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-muted-foreground">Luminosity</p>
-                    <p className="text-lg font-semibold">
-                      {stellarProperty.luminosity.toFixed(2)} L☉
+                    <p className="text-sm text-muted-foreground">Stellar Classification</p>
+                    <p className="text-lg font-semibold font-mono">
+                      {primaryStar.stellarClass}{primaryStar.stellarGrade}
                     </p>
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Mass</p>
-                    <p className="text-lg font-semibold">
-                      {stellarProperty.mass.toFixed(2)} M☉
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Temperature</p>
-                    <p className="text-lg font-semibold">
-                      {stellarProperty.temperature} K
-                    </p>
-                  </div>
-                </>
-              )}
-            </div>
+                  {stellarProperty && (
+                    <>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Luminosity</p>
+                        <p className="text-lg font-semibold">
+                          {stellarProperty.luminosity.toFixed(2)} L☉
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Mass</p>
+                        <p className="text-lg font-semibold">
+                          {stellarProperty.mass.toFixed(2)} M☉
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Temperature</p>
+                        <p className="text-lg font-semibold">
+                          {stellarProperty.temperature} K
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </div>
 
-            {/* Companion Star Info */}
-            {companionStars && companionStars.companions.length > 0 && (
-              <div className="mt-4 pt-4 border-t">
-                <div className="flex items-center gap-2 mb-2">
-                  <Badge variant="secondary">{companionStars.systemType}</Badge>
-                  <span className="text-sm text-muted-foreground">
-                    {companionStars.companions.length} companion star(s)
-                  </span>
-                </div>
-                <div className="space-y-1">
-                  {companionStars.companions.map((companion, idx) => (
-                    <p key={idx} className="text-sm text-muted-foreground">
-                      • {companion.name} at {companion.orbitalDistance.toFixed(1)} AU
-                    </p>
-                  ))}
-                </div>
-              </div>
-            )}
-          </CardContent>
+                {/* Companion Star Info */}
+                {companionStars && companionStars.companions.length > 0 && (
+                  <div className="mt-4 pt-4 border-t">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Badge variant="secondary">{companionStars.systemType}</Badge>
+                      <span className="text-sm text-muted-foreground">
+                        {companionStars.companions.length} companion star(s)
+                      </span>
+                    </div>
+                    <div className="space-y-1">
+                      {companionStars.companions.map((companion, idx) => (
+                        <p key={idx} className="text-sm text-muted-foreground">
+                          • {companion.name} at {companion.orbitalDistance.toFixed(1)} AU
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
             </Card>
           )}
 
-          {/* Zone and Limits Visualization */}
+          {/* Technological Level */}
           <div>
-        <h2 className="text-xl font-semibold mb-4">Stellar Zones & Orbital Limits</h2>
-        {isLoadingZones ? (
-          <Card className="p-6">
-            <Skeleton className="h-64 w-full" />
-            <p className="text-sm text-muted-foreground mt-3 text-center">
-              Loading stellar zones...
-            </p>
-          </Card>
-        ) : primaryZones ? (
-          <StellarZonesDisplay
-            zones={primaryZones}
-            companionDistance={
-              companionStars?.companions?.[0]?.orbitalDistance
-            }
-          />
-        ) : (
-          <Card className="p-6">
-            <p className="text-sm text-muted-foreground text-center">
-              No primary star data available. Please create a primary star first.
-            </p>
-          </Card>
-        )}
+            <Label
+              htmlFor="tech-level"
+              className="text-lg font-semibold mb-3 block"
+            >
+              Technological Level
+            </Label>
+            <Select value={techLevel} onValueChange={setTechLevel}>
+              <SelectTrigger id="tech-level" className="w-full">
+                <SelectValue placeholder="Select technological era" />
+              </SelectTrigger>
+              <SelectContent>
+                {TECH_LEVELS.map((tl) => (
+                  <SelectItem key={tl.value} value={tl.value}>
+                    {tl.label} - {tl.era}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {selectedTechLevel && (
+              <div className="mt-3 p-3 bg-muted rounded-lg">
+                <div className="text-sm">
+                  <span className="font-semibold">{selectedTechLevel.label}</span>
+                  <span className="text-muted-foreground">
+                    {" "}
+                    • {selectedTechLevel.era}
+                  </span>
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  Cepheus Engine TL: {selectedTechLevel.cetl}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* RIGHT COLUMN */}
-        <div className="space-y-6">
-          {/* Technological Level */}
-          <div>
-        <Label
-          htmlFor="tech-level"
-          className="text-lg font-semibold mb-3 block"
-        >
-          Technological Level
-        </Label>
-        <Select value={techLevel} onValueChange={setTechLevel}>
-          <SelectTrigger id="tech-level" className="w-full">
-            <SelectValue placeholder="Select technological era" />
-          </SelectTrigger>
-          <SelectContent>
-            {TECH_LEVELS.map((tl) => (
-              <SelectItem key={tl.value} value={tl.value}>
-                {tl.label} - {tl.era}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {selectedTechLevel && (
-          <div className="mt-3 p-3 bg-muted rounded-lg">
-            <div className="text-sm">
-              <span className="font-semibold">{selectedTechLevel.label}</span>
-              <span className="text-muted-foreground">
-                {" "}
-                • {selectedTechLevel.era}
-              </span>
-            </div>
-            <div className="text-xs text-muted-foreground mt-1">
-              Cepheus Engine TL: {selectedTechLevel.cetl}
-            </div>
-          </div>
-        )}
-          </div>
-
+        {/* ROW 2: World Development and Habitability Preview */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* World Development Level */}
           <div>
-        <h3 className="text-base font-semibold mb-3 flex items-center gap-2">
-          <TrendingUp className="h-4 w-4" />
-          World Development Level
-        </h3>
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">{developmentInfo.label}</CardTitle>
-              <Badge variant="secondary" className="font-mono">
-                TL {techLevel || '11'}
-              </Badge>
-            </div>
-            <p className="text-sm text-muted-foreground mt-1">
-              {developmentInfo.description}
-            </p>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {/* Governance Modifier */}
-              <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                <Shield className="h-5 w-5 mt-0.5 text-blue-600 dark:text-blue-400" />
-                <div className="flex-1">
-                  <p className="font-semibold text-sm">Governance</p>
-                  <p className="text-sm text-muted-foreground">
-                    {developmentInfo.governanceModifier}
-                  </p>
+            <h3 className="text-base font-semibold mb-3 flex items-center gap-2">
+              <TrendingUp className="h-4 w-4" />
+              World Development Level
+            </h3>
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">{developmentInfo.label}</CardTitle>
+                  <Badge variant="secondary" className="font-mono">
+                    TL {techLevel || '11'}
+                  </Badge>
                 </div>
-              </div>
-
-              {/* Port Fee Multiplier */}
-              <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                <TrendingUp className="h-5 w-5 mt-0.5 text-green-600 dark:text-green-400" />
-                <div className="flex-1">
-                  <p className="font-semibold text-sm">Port Fees</p>
-                  <p className="text-sm text-muted-foreground">
-                    {developmentInfo.portFeeMultiplier}x standard rate
-                  </p>
-                </div>
-              </div>
-
-              {/* Development Effects */}
-              <div className="pt-2 border-t">
-                <p className="text-xs font-semibold text-muted-foreground mb-2">
-                  MECHANICAL EFFECTS
+                <p className="text-sm text-muted-foreground mt-1">
+                  {developmentInfo.description}
                 </p>
-                <ul className="space-y-1">
-                  {developmentInfo.effects.map((effect, idx) => (
-                    <li key={idx} className="text-sm flex items-start gap-2">
-                      <span className="text-primary mt-1">•</span>
-                      <span>{effect}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {/* Governance Modifier */}
+                  <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+                    <Shield className="h-5 w-5 mt-0.5 text-blue-600 dark:text-blue-400" />
+                    <div className="flex-1">
+                      <p className="font-semibold text-sm">Governance</p>
+                      <p className="text-sm text-muted-foreground">
+                        {developmentInfo.governanceModifier}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Port Fee Multiplier */}
+                  <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+                    <TrendingUp className="h-5 w-5 mt-0.5 text-green-600 dark:text-green-400" />
+                    <div className="flex-1">
+                      <p className="font-semibold text-sm">Port Fees</p>
+                      <p className="text-sm text-muted-foreground">
+                        {developmentInfo.portFeeMultiplier}x standard rate
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Development Effects */}
+                  <div className="pt-2 border-t">
+                    <p className="text-xs font-semibold text-muted-foreground mb-2">
+                      MECHANICAL EFFECTS
+                    </p>
+                    <ul className="space-y-1">
+                      {developmentInfo.effects.map((effect, idx) => (
+                        <li key={idx} className="text-sm flex items-start gap-2">
+                          <span className="text-primary mt-1">•</span>
+                          <span>{effect}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Habitability Preview */}
           <div>
-        <h3 className="text-base font-semibold mb-3 flex items-center gap-2">
-          <AlertTriangle className="h-4 w-4" />
-          Habitability Preview
-        </h3>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center mb-4">
-              <p className="text-sm text-muted-foreground mb-2">
-                Estimated Habitability Rating
-              </p>
-              <p className={`text-2xl font-bold ${habitabilityRating.color}`}>
-                {habitabilityRating.rating}
-              </p>
-              <p className="text-sm text-muted-foreground mt-1">
-                {habitabilityRating.description}
-              </p>
-            </div>
+            <h3 className="text-base font-semibold mb-3 flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4" />
+              Habitability Preview
+            </h3>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="text-center mb-4">
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Estimated Habitability Rating
+                  </p>
+                  <p className={`text-2xl font-bold ${habitabilityRating.color}`}>
+                    {habitabilityRating.rating}
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {habitabilityRating.description}
+                  </p>
+                </div>
 
-            <div className="p-3 bg-muted/50 rounded-lg">
-              <p className="text-xs text-muted-foreground">
-                <strong>Note:</strong> Final habitability will be calculated based on
-                atmospheric pressure, temperature, hazards, and biochemical resources
-                configured on the Habitability page.
-              </p>
-            </div>
+                <div className="p-3 bg-muted/50 rounded-lg">
+                  <p className="text-xs text-muted-foreground">
+                    <strong>Note:</strong> Final habitability will be calculated based on
+                    atmospheric pressure, temperature, hazards, and biochemical resources
+                    configured on the Habitability page.
+                  </p>
+                </div>
 
-            {/* Modifiers that will affect habitability */}
-            <div className="mt-4 pt-4 border-t">
-              <p className="text-xs font-semibold text-muted-foreground mb-2">
-                HABITABILITY MODIFIERS (PREVIEW)
-              </p>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="p-2 bg-muted/30 rounded">
-                  <p className="text-muted-foreground">Tech Level</p>
-                  <p className="font-semibold">TL {techLevel || '11'}</p>
+                {/* Modifiers that will affect habitability */}
+                <div className="mt-4 pt-4 border-t">
+                  <p className="text-xs font-semibold text-muted-foreground mb-2">
+                    HABITABILITY MODIFIERS (PREVIEW)
+                  </p>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="p-2 bg-muted/30 rounded">
+                      <p className="text-muted-foreground">Tech Level</p>
+                      <p className="font-semibold">TL {techLevel || '11'}</p>
+                    </div>
+                    <div className="p-2 bg-muted/30 rounded">
+                      <p className="text-muted-foreground">Orbital Zone</p>
+                      <p className="font-semibold">To be determined</p>
+                    </div>
+                    <div className="p-2 bg-muted/30 rounded">
+                      <p className="text-muted-foreground">Atmosphere</p>
+                      <p className="font-semibold">Not configured</p>
+                    </div>
+                    <div className="p-2 bg-muted/30 rounded">
+                      <p className="text-muted-foreground">Hazards</p>
+                      <p className="font-semibold">Not configured</p>
+                    </div>
+                  </div>
                 </div>
-                <div className="p-2 bg-muted/30 rounded">
-                  <p className="text-muted-foreground">Orbital Zone</p>
-                  <p className="font-semibold">To be determined</p>
-                </div>
-                <div className="p-2 bg-muted/30 rounded">
-                  <p className="text-muted-foreground">Atmosphere</p>
-                  <p className="font-semibold">Not configured</p>
-                </div>
-                <div className="p-2 bg-muted/30 rounded">
-                  <p className="text-muted-foreground">Hazards</p>
-                  <p className="font-semibold">Not configured</p>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
           </div>
+        </div>
+
+        {/* ROW 3: Stellar Zones (Full Width) */}
+        <div>
+          <h2 className="text-xl font-semibold mb-4">Stellar Zones & Orbital Limits</h2>
+          {isLoadingZones ? (
+            <Card className="p-6">
+              <Skeleton className="h-64 w-full" />
+              <p className="text-sm text-muted-foreground mt-3 text-center">
+                Loading stellar zones...
+              </p>
+            </Card>
+          ) : primaryZones ? (
+            <StellarZonesDisplay
+              zones={primaryZones}
+              companionDistance={
+                companionStars?.companions?.[0]?.orbitalDistance
+              }
+            />
+          ) : (
+            <Card className="p-6">
+              <p className="text-sm text-muted-foreground text-center">
+                No primary star data available. Please create a primary star first.
+              </p>
+            </Card>
+          )}
         </div>
       </div>
     </div>
