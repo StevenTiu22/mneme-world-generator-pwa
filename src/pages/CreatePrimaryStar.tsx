@@ -4,6 +4,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { getStellarProperty } from "@/lib/db/queries/stellarQueries";
 import { generateStarId } from "@/lib/db/queries/starQueries";
+import { generateStarName } from "@/lib/generators/primaryStarGenerator";
 import type {
   StellarClass as StellarClassType,
   StellarGrade,
@@ -36,7 +37,7 @@ export function CreatePrimaryStar() {
   const navigate = useNavigate();
   const context = useOutletContext<LayoutContext>();
   const [starId, setStarId] = useState(() => generateStarId());
-  const [starName, setStarName] = useState("Primary Star #1");
+  const [starName, setStarName] = useState(() => generateStarName());
   const [selectedClass, setSelectedClass] = useState<StarClass>("G");
   const [classGrade, setClassGrade] = useState(5);
   const [generationMethod, setGenerationMethod] = useState<GenerationMethod>(

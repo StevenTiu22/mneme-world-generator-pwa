@@ -194,6 +194,7 @@ export async function deleteStars(ids: string[]): Promise<void> {
 
 /**
  * Save a complete star system (primary star + companions)
+ * Saves to both the starSystems table and individual stars table
  *
  * @param system - Star system to save
  * @returns The system ID
@@ -203,7 +204,10 @@ export async function saveStarSystem(system: StarSystem): Promise<string> {
   try {
     await db.open();
 
-    // Save primary star
+    // Save the complete system to starSystems table
+    await db.starSystems.put(system);
+
+    // Also save individual stars to stars table for backward compatibility
     await saveStar(system.primaryStar);
 
     // Save companion stars if any
@@ -218,6 +222,152 @@ export async function saveStarSystem(system: StarSystem): Promise<string> {
   } catch (error) {
     console.error(`❌ Error saving star system ${system.name}:`, error);
     throw new Error(`Failed to save star system: ${system.name}`);
+  }
+}
+
+/**
+ * Get all saved star systems from the database
+ *
+ * @returns Array of all star systems, sorted by creation date (newest first)
+ * @throws Error if query fails
+ */
+export async function getAllStarSystems(): Promise<StarSystem[]> {
+  try {
+    await db.open();
+    const systems = await db.starSystems.orderBy('createdAt').reverse().toArray();
+    console.debug(`📊 Loaded ${systems.length} star systems from database`);
+    return systems;
+  } catch (error) {
+    console.error('❌ Error loading all star systems:', error);
+    throw new Error('Failed to load saved star systems');
+  }
+}
+
+/**
+ * Get a star system by its ID
+ *
+ * @param id - Star system ID
+ * @returns Star system data or undefined if not found
+ * @throws Error if query fails
+ */
+export async function getStarSystemById(id: string): Promise<StarSystem | undefined> {
+  try {
+    await db.open();
+    const system = await db.starSystems.get(id);
+    if (system) {
+      console.debug(`🔍 Found star system: ${system.name} (${id})`);
+    } else {
+      console.debug(`🔍 Star system not found: ${id}`);
+    }
+    return system;
+  } catch (error) {
+    console.error(`❌ Error retrieving star system ${id}:`, error);
+    throw new Error(`Failed to retrieve star system: ${id}`);
+  }
+}
+
+/**
+ * Update an existing star system
+ *
+ * @param id - ID of the star system to update
+ * @param updates - Partial star system data to update
+ * @returns Updated star system data
+ * @throws Error if system not found or update fails
+ */
+export async function updateStarSystem(
+  id: string,
+  updates: Partial<Omit<StarSystem, 'id' | 'createdAt' | 'createdBy'>>
+): Promise<StarSystem> {
+  try {
+    await db.open();
+
+    const existingSystem = await db.starSystems.get(id);
+    if (!existingSystem) {
+      throw new Error(`Star system not found: ${id}`);
+    }
+
+    const updatedSystem: StarSystem = {
+      ...existingSystem,
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await db.starSystems.put(updatedSystem);
+    console.debug(`✏️ Updated star system: ${updatedSystem.name} (${id})`);
+    return updatedSystem;
+  } catch (error) {
+    console.error(`❌ Error updating star system ${id}:`, error);
+    throw error instanceof Error
+      ? error
+      : new Error(`Failed to update star system: ${id}`);
+  }
+}
+
+/**
+ * Delete a star system from the database
+ * Also deletes associated stars from the stars table
+ *
+ * @param id - ID of the star system to delete
+ * @throws Error if delete fails
+ */
+export async function deleteStarSystem(id: string): Promise<void> {
+  try {
+    await db.open();
+
+    // Get the system first to find associated star IDs
+    const system = await db.starSystems.get(id);
+
+    if (system) {
+      // Delete associated stars
+      const starIds = [
+        system.primaryStar.id,
+        ...system.companionStars.map(star => star.id)
+      ];
+      await deleteStars(starIds);
+    }
+
+    // Delete the system itself
+    await db.starSystems.delete(id);
+    console.debug(`🗑️ Deleted star system: ${id}`);
+  } catch (error) {
+    console.error(`❌ Error deleting star system ${id}:`, error);
+    throw new Error(`Failed to delete star system: ${id}`);
+  }
+}
+
+/**
+ * Get count of saved star systems
+ *
+ * @returns Number of star systems in database
+ * @throws Error if count fails
+ */
+export async function getStarSystemCount(): Promise<number> {
+  try {
+    await db.open();
+    const count = await db.starSystems.count();
+    console.debug(`📊 Total star systems in database: ${count}`);
+    return count;
+  } catch (error) {
+    console.error('❌ Error counting star systems:', error);
+    throw new Error('Failed to count star systems');
+  }
+}
+
+/**
+ * Clear all saved star systems from the database
+ *
+ * WARNING: This will delete all user star system data!
+ *
+ * @throws Error if clear fails
+ */
+export async function clearAllStarSystems(): Promise<void> {
+  try {
+    await db.open();
+    await db.starSystems.clear();
+    console.warn('⚠️ Cleared all star systems from database');
+  } catch (error) {
+    console.error('❌ Error clearing star systems:', error);
+    throw new Error('Failed to clear star systems');
   }
 }
 

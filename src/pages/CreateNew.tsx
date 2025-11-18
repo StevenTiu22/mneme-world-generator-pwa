@@ -37,7 +37,7 @@ export function CreateNewPage() {
   }, [selection, handleNext, context]);
 
   return (
-    <div className="w-full max-w-4xl animate-in fade-in duration-500">
+    <div className="w-full max-w-4xl mx-auto animate-in fade-in duration-500">
       <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-12 text-center md:text-left">
         How do you want to create your world?
       </h1>

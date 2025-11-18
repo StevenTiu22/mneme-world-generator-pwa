@@ -4,6 +4,7 @@ import { CenteredLayout } from "./components/layout/centered-layout";
 import { Home } from "./pages/Home";
 import { MyWorlds } from "./pages/MyWorlds";
 import { CreateNewPage } from "./pages/CreateNew";
+import { QuickGenerate } from "./pages/QuickGenerate";
 import { CreatePrimaryStar } from "./pages/CreatePrimaryStar";
 import { CreateWorldContext } from "./pages/CreateWorldContext";
 import { CreateCompanionStar } from "./pages/CreateCompanionStar";
@@ -22,6 +23,7 @@ export default function AppRoutes() {
       </Route>
       <Route path="/create-new" element={<CenteredLayout />}>
         <Route index element={<CreateNewPage />} />
+        <Route path="quick" element={<QuickGenerate />} />
         <Route path="primary-star" element={<CreatePrimaryStar />} />
         <Route path="world-context" element={<CreateWorldContext />} />
         <Route path="companion-star" element={<CreateCompanionStar />} />

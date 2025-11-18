@@ -187,9 +187,12 @@ export async function generateSingleCompanion(
   // Generate unique ID
   const id = `companion-${Date.now()}-${companionNumber}`;
 
-  // Generate default name
-  const companionLabels = ['B', 'C', 'D'];
-  const name = `Companion ${companionLabels[companionNumber - 1] || companionNumber}`;
+  // Generate unique incremental name
+  const counterKey = 'companionNameCounter';
+  const currentCounter = parseInt(localStorage.getItem(counterKey) || '0', 10);
+  const nextNumber = currentCounter + 1;
+  localStorage.setItem(counterKey, nextNumber.toString());
+  const name = `Companion #${nextNumber}`;
 
   return {
     id,

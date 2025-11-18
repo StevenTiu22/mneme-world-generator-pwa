@@ -9,6 +9,7 @@ import {
   Sparkles,
   Dices,
   Check,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,13 +42,14 @@ import { Slider } from "@/components/ui/slider";
 import { generateCompanionStars } from "@/lib/generators/companionStarGenerator";
 import type { StellarClass, StellarGrade } from "@/models/stellar/types/enums";
 import { GenerationMethod } from "@/models/common/types";
-import type { StellarZones } from "@/models/stellar/types/interface";
+import type { StellarZones, StarData, StarSystem } from "@/models/stellar/types/interface";
 import { StellarZonesDisplay } from "@/components/stellar/StellarZonesDisplay";
 import {
   calculateStellarZonesFromClassGrade,
   validateCompanionOrbit,
   calculateStablePlanetaryOrbitLimit,
 } from "@/lib/stellar/zoneCalculations";
+import { saveStarSystem, generateSystemId, generateStarId } from "@/lib/db/queries/starQueries";
 
 // TypeScript types
 type StarClass = "O" | "B" | "A" | "F" | "G" | "K" | "M" | "Random";
@@ -130,6 +132,8 @@ export function CreateCompanionStar() {
   const [isRenameOpen, setIsRenameOpen] = useState(false);
   const [renameValue, setRenameValue] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState("");
   const [primaryZones, setPrimaryZones] = useState<StellarZones | null>(null);
   const [orbitWarnings, setOrbitWarnings] = useState<string[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -204,6 +208,7 @@ export function CreateCompanionStar() {
       const primaryStarData = localStorage.getItem("primaryStar");
       if (!primaryStarData) {
         alert("No primary star found. Please create a primary star first.");
+        setIsGenerating(false);
         return;
       }
 
@@ -211,11 +216,28 @@ export function CreateCompanionStar() {
       const primaryClass = primaryStar.stellarClass as StellarClass;
       const primaryGrade = primaryStar.stellarGrade as StellarGrade;
 
-      // Generate companions
-      const result = await generateCompanionStars(primaryClass, primaryGrade);
+      // Keep rolling until we get at least one companion (max 10 attempts)
+      let result = await generateCompanionStars(primaryClass, primaryGrade);
+      let attempts = 1;
+      const maxAttempts = 10;
+
+      console.log(`🎲 Attempt ${attempts}: Rolled for companions - got ${result.companions.length} companions`);
+
+      while (result.companions.length === 0 && attempts < maxAttempts) {
+        attempts++;
+        result = await generateCompanionStars(primaryClass, primaryGrade);
+        console.log(`🎲 Attempt ${attempts}: Rolled for companions - got ${result.companions.length} companions`);
+      }
 
       if (result.companions.length === 0) {
-        alert("No companion stars were generated. Try again or add manually.");
+        alert(
+          `No companion stars generated after ${maxAttempts} attempts.\n\n` +
+          `This is normal for ${primaryClass}-class stars - they have a lower chance of companions.\n\n` +
+          `You can:\n` +
+          `• Try again (click Generate Procedurally)\n` +
+          `• Add companions manually using the + Add Companion button`
+        );
+        setIsGenerating(false);
         return;
       }
 
@@ -244,6 +266,8 @@ export function CreateCompanionStar() {
 
       setCompanions(newCompanions);
       setActiveCompanion(0);
+
+      console.log(`✅ Successfully generated ${newCompanions.length} companion(s) after ${attempts} attempt(s)`);
     } catch (error) {
       console.error("Failed to generate companions:", error);
       alert("Failed to generate companions. Please try again or add manually.");
@@ -255,9 +279,15 @@ export function CreateCompanionStar() {
   const addCompanion = () => {
     if (companions.length >= maxCompanions) return;
 
+    // Generate unique incremental name
+    const counterKey = 'companionNameCounter';
+    const currentCounter = parseInt(localStorage.getItem(counterKey) || '0', 10);
+    const nextNumber = currentCounter + 1;
+    localStorage.setItem(counterKey, nextNumber.toString());
+
     const newCompanion: Companion = {
       id: Date.now(),
-      name: `Companion Star ${companions.length + 1}`,
+      name: `Companion #${nextNumber}`,
       class: null,
       luminosity: "Random",
       orbitalDistance: 50,
@@ -303,13 +333,75 @@ export function CreateCompanionStar() {
   };
 
   // Handler for finishing world creation
-  const handleFinish = useCallback(() => {
-    const companionData = {
-      systemType,
-      companions,
-    };
-    localStorage.setItem("companionStars", JSON.stringify(companionData));
-    navigate("/my-worlds");
+  const handleFinish = useCallback(async () => {
+    setIsSaving(true);
+    try {
+      // Step 1: Prepare data
+      setSaveStatus("💾 Preparing system data...");
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      // Save to localStorage for backward compatibility
+      const companionData = {
+        systemType,
+        companions,
+      };
+      localStorage.setItem("companionStars", JSON.stringify(companionData));
+
+      // Load primary star from localStorage
+      const primaryStarDataRaw = localStorage.getItem("primaryStar");
+      if (!primaryStarDataRaw) {
+        console.error("No primary star found");
+        alert("Error: Primary star data not found. Please go back and configure the primary star.");
+        setIsSaving(false);
+        return;
+      }
+
+      const primaryStarData = JSON.parse(primaryStarDataRaw) as StarData;
+
+      // Step 2: Convert companions
+      setSaveStatus("🌟 Processing companion stars...");
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      const companionStars: StarData[] = companions.map((comp) => ({
+        id: typeof comp.id === 'string' ? comp.id : generateStarId(),
+        name: comp.name,
+        stellarClass: comp.class as StellarClass,
+        stellarGrade: (comp.grade ?? 5) as StellarGrade,
+        generationMethod: comp.generationMethod ?? GenerationMethod.CUSTOM,
+        diceRolls: comp.diceRolls,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        createdBy: "user",
+      }));
+
+      // Create StarSystem object
+      const starSystem: StarSystem = {
+        id: generateSystemId(),
+        name: `${primaryStarData.name} System`,
+        primaryStar: primaryStarData,
+        companionStars: companionStars,
+        createdAt: primaryStarData.createdAt,
+        updatedAt: new Date().toISOString(),
+        createdBy: "user",
+      };
+
+      // Step 3: Save to IndexedDB
+      setSaveStatus("💿 Saving to database...");
+      await saveStarSystem(starSystem);
+      console.log("✅ Star system saved to database:", starSystem.name);
+
+      // Step 4: Complete
+      setSaveStatus("✅ Save complete!");
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // Navigate to My Worlds
+      navigate("/my-worlds");
+    } catch (error) {
+      console.error("❌ Failed to save star system:", error);
+      setSaveStatus("❌ Save failed");
+      setIsSaving(false);
+      alert("Failed to save star system. Please try again.");
+    }
   }, [navigate, systemType, companions]);
 
   // Update button handlers
@@ -925,6 +1017,20 @@ export function CreateCompanionStar() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Saving Status Overlay */}
+        {isSaving && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+            <Card className="p-8 min-w-[300px]">
+              <CardContent className="pt-6">
+                <div className="text-center space-y-4">
+                  <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
+                  <p className="text-xl font-semibold">{saveStatus}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
     </TooltipProvider>
   );
