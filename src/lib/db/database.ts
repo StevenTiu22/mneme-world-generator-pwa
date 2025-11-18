@@ -9,7 +9,7 @@
 
 import Dexie, { type EntityTable } from 'dexie';
 import type { StellarProperty } from '@/models/stellar/data/constants';
-import type { StarData } from '@/models/stellar/types/interface';
+import type { StarData, StarSystem } from '@/models/stellar/types/interface';
 
 // =====================
 // Database Schema
@@ -19,18 +19,20 @@ import type { StarData } from '@/models/stellar/types/interface';
  * MnemeDB - Main database class
  *
  * Version 1: Stellar reference data for Primary Star lookups
+ * Version 2: Added starSystems table for persistent user-created star systems
  */
 export class MnemeDB extends Dexie {
   // Reference data tables (read-only, seeded once on first load)
   stellarProperties!: EntityTable<StellarProperty, 'id'>;
 
-  // User data tables (for future use)
+  // User data tables
   stars!: EntityTable<StarData, 'id'>;
+  starSystems!: EntityTable<StarSystem, 'id'>;
 
   constructor() {
     super('MnemeDB');
 
-    // Define database schema
+    // Define database schema v1
     this.version(1).stores({
       // Reference data - indexed by id (e.g., "G5")
       // Compound index on [stellarClass+stellarGrade] for efficient queries
@@ -38,6 +40,18 @@ export class MnemeDB extends Dexie {
 
       // User stars - indexed by id, searchable by stellar properties
       stars: 'id, name, stellarClass, stellarGrade, createdAt',
+    });
+
+    // Database schema v2 - Add starSystems table
+    this.version(2).stores({
+      // Reference data (unchanged)
+      stellarProperties: 'id, [stellarClass+stellarGrade]',
+
+      // User stars (unchanged)
+      stars: 'id, name, stellarClass, stellarGrade, createdAt',
+
+      // User star systems - complete systems with primary + companions
+      starSystems: 'id, name, createdAt',
     });
   }
 }

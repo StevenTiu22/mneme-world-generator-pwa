@@ -73,7 +73,9 @@ export function CenteredLayout() {
   const location = useLocation();
   const [nextDisabled, setNextDisabled] = useState(true);
   const [nextHandler, setNextHandler] = useState<() => void>(() => () => {});
-  const [finishHandler, setFinishHandler] = useState<() => void>(() => () => {});
+  const [finishHandler, setFinishHandler] = useState<() => void>(
+    () => () => {}
+  );
   const [showButtons, setShowButtons] = useState(false);
 
   const navConfig: RouteConfig = ROUTE_CONFIG[location.pathname] || {
@@ -159,12 +161,16 @@ export function CenteredLayout() {
       {/* Main content area with centered content */}
       <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 pb-32">
         <div className="w-full">
-          <Outlet context={{ setNextDisabled, setNextHandler, setFinishHandler }} />
+          <Outlet
+            context={{ setNextDisabled, setNextHandler, setFinishHandler }}
+          />
         </div>
       </div>
 
       {/* Fixed navigation buttons at bottom right - only visible when scrolled to bottom */}
-      {(navConfig.showPrevious || navConfig.showNext || navConfig.showFinish) && (
+      {(navConfig.showPrevious ||
+        navConfig.showNext ||
+        navConfig.showFinish) && (
         <div
           className={`fixed bottom-8 right-8 z-40 flex gap-4 transition-all duration-300 ${
             showButtons
