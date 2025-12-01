@@ -168,7 +168,7 @@ export function CreateInhabitants() {
   // Handler for Next button
   const handleNext = useCallback(() => {
     saveData();
-    navigate("../planetary-system");
+    navigate("../world-starport");
   }, [navigate, saveData]);
 
   // Update Next button state

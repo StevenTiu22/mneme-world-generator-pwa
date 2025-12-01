@@ -24,4 +24,5 @@ docs
 *.njsproj
 *.sln
 *.sw?
+.claude
 CLAUDE.md

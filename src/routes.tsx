@@ -9,7 +9,9 @@ import { CreatePrimaryStar } from "./pages/CreatePrimaryStar";
 import { CreateWorldContext } from "./pages/CreateWorldContext";
 import { CreateCompanionStar } from "./pages/CreateCompanionStar";
 import { CreateMainWorld } from "./pages/CreateMainWorld";
+import { CreateWorldCulture } from "./pages/CreateWorldCulture";
 import { CreateHabitability } from "./pages/CreateHabitability";
+import { CreateWorldStarport } from "./pages/CreateWorldStarport";
 import { CreatePosition } from "./pages/CreatePosition";
 import { CreateInhabitants } from "./pages/CreateInhabitants";
 import { CreatePlanetarySystem } from "./pages/CreatePlanetarySystem";
@@ -28,7 +30,9 @@ export default function AppRoutes() {
         <Route path="world-context" element={<CreateWorldContext />} />
         <Route path="companion-star" element={<CreateCompanionStar />} />
         <Route path="main-world" element={<CreateMainWorld />} />
+        <Route path="world-culture" element={<CreateWorldCulture />} />
         <Route path="habitability" element={<CreateHabitability />} />
+        <Route path="world-starport" element={<CreateWorldStarport />} />
         <Route path="position" element={<CreatePosition />} />
         <Route path="inhabitants" element={<CreateInhabitants />} />
         <Route path="planetary-system" element={<CreatePlanetarySystem />} />

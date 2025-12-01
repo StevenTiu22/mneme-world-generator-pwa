@@ -404,6 +404,26 @@ export function CreateCompanionStar() {
     }
   }, [navigate, systemType, companions]);
 
+  // Handler for Next button (continue to main world)
+  const handleNext = useCallback(() => {
+    // Save companion star data to localStorage
+    const data = {
+      companions: companions.map((comp) => ({
+        id: comp.id,
+        name: comp.name,
+        class: comp.class,
+        grade: comp.grade,
+        generationMethod: comp.generationMethod,
+        diceRolls: comp.diceRolls,
+      })),
+    };
+    localStorage.setItem("companionStars", JSON.stringify(data));
+    console.log("💾 Saved companion star data to localStorage");
+
+    // Navigate to main world page
+    navigate("../main-world");
+  }, [navigate, companions]);
+
   // Update button handlers
   useEffect(() => {
     if (context) {
@@ -412,14 +432,12 @@ export function CreateCompanionStar() {
       const canProceed = !hasCompanions || hasConfiguredCompanion;
 
       context.setNextDisabled(!canProceed);
-      context.setNextHandler(() => handleFinish);
+      context.setNextHandler(() => handleNext);
 
-      // Set finish handler for the layout's Finish button
-      if (context.setFinishHandler) {
-        context.setFinishHandler(() => handleFinish);
-      }
+      // NOTE: handleFinish is kept for potential future "Save & Exit" functionality
+      // but is not currently used in the wizard flow
     }
-  }, [handleFinish, context, companions]);
+  }, [handleNext, context, companions]);
 
   // Load saved data on mount
   useEffect(() => {
