@@ -37,34 +37,49 @@ const ROUTE_CONFIG: Record<string, RouteConfig> = {
   },
   "/create-new/companion-star": {
     showPrevious: true,
-    showNext: false,
-    showFinish: true,
+    showNext: true,
     previousPath: "/create-new/world-context",
+    nextPath: "/create-new/main-world",
   },
   "/create-new/main-world": {
     showPrevious: true,
     showNext: true,
     previousPath: "/create-new/companion-star",
+    nextPath: "/create-new/world-culture",
+  },
+  "/create-new/world-culture": {
+    showPrevious: true,
+    showNext: true,
+    previousPath: "/create-new/main-world",
+    nextPath: "/create-new/habitability",
   },
   "/create-new/habitability": {
     showPrevious: true,
     showNext: true,
-    previousPath: "/create-new/main-world",
-  },
-  "/create-new/position": {
-    showPrevious: true,
-    showNext: true,
-    previousPath: "/create-new/habitability",
+    previousPath: "/create-new/world-culture",
+    nextPath: "/create-new/inhabitants",
   },
   "/create-new/inhabitants": {
     showPrevious: true,
     showNext: true,
-    previousPath: "/create-new/position",
+    previousPath: "/create-new/habitability",
+    nextPath: "/create-new/world-starport",
+  },
+  "/create-new/world-starport": {
+    showPrevious: true,
+    showNext: true,
+    previousPath: "/create-new/inhabitants",
+    nextPath: "/create-new/position",
+  },
+  "/create-new/position": {
+    showPrevious: true,
+    showNext: true,
+    previousPath: "/create-new/world-starport",
   },
   "/create-new/planetary-system": {
     showPrevious: true,
     showNext: false,
-    previousPath: "/create-new/inhabitants",
+    previousPath: "/create-new/position",
   },
 };
 

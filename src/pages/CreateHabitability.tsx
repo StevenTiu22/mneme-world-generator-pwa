@@ -177,7 +177,7 @@ export function CreateHabitability() {
   // Handler for Next button
   const handleNext = useCallback(() => {
     saveData();
-    navigate("../position");
+    navigate("../inhabitants");
   }, [navigate, saveData]);
 
   // Update Next button state

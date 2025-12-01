@@ -10,6 +10,7 @@
 import Dexie, { type EntityTable } from 'dexie';
 import type { StellarProperty } from '@/models/stellar/data/constants';
 import type { StarData, StarSystem } from '@/models/stellar/types/interface';
+import type { WorldData } from '@/models/world';
 
 // =====================
 // Database Schema
@@ -20,6 +21,7 @@ import type { StarData, StarSystem } from '@/models/stellar/types/interface';
  *
  * Version 1: Stellar reference data for Primary Star lookups
  * Version 2: Added starSystems table for persistent user-created star systems
+ * Version 3: Added worlds table for planetary data
  */
 export class MnemeDB extends Dexie {
   // Reference data tables (read-only, seeded once on first load)
@@ -28,6 +30,7 @@ export class MnemeDB extends Dexie {
   // User data tables
   stars!: EntityTable<StarData, 'id'>;
   starSystems!: EntityTable<StarSystem, 'id'>;
+  worlds!: EntityTable<WorldData, 'id'>;
 
   constructor() {
     super('MnemeDB');
@@ -52,6 +55,21 @@ export class MnemeDB extends Dexie {
 
       // User star systems - complete systems with primary + companions
       starSystems: 'id, name, createdAt',
+    });
+
+    // Database schema v3 - Add worlds table
+    this.version(3).stores({
+      // Reference data (unchanged)
+      stellarProperties: 'id, [stellarClass+stellarGrade]',
+
+      // User stars (unchanged)
+      stars: 'id, name, stellarClass, stellarGrade, createdAt',
+
+      // User star systems (unchanged)
+      starSystems: 'id, name, createdAt',
+
+      // User worlds - planets/habitats linked to star systems
+      worlds: 'id, name, starSystemId, createdAt',
     });
   }
 }

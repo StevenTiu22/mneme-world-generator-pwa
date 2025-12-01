@@ -174,7 +174,7 @@ export function CreatePosition() {
   // Handler for Next button
   const handleNext = useCallback(() => {
     saveData();
-    navigate("../inhabitants");
+    navigate("../planetary-system");
   }, [navigate, saveData]);
 
   // Update Next button state
