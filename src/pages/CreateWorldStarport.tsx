@@ -5,6 +5,14 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Tooltip,
   TooltipContent,
@@ -19,9 +27,14 @@ import {
 } from "@/lib/generators/starportGenerator";
 import {
   type StarportData,
+  type StarportClass,
   BaseType,
   getStarportClassColor,
+  getAllStarportClasses,
+  getStarportClassLabel,
 } from "@/models/world/starport";
+import { STARPORT_CLASS_TABLE } from "@/lib/generators/worldTables";
+import { v4 as uuidv4 } from 'uuid';
 
 interface LayoutContext {
   setNextDisabled: (disabled: boolean) => void;
@@ -141,6 +154,10 @@ export function CreateWorldStarport() {
   const [starport, setStarport] = useState<StarportData | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
+  // Generation mode state
+  const [generationMode, setGenerationMode] = useState<'procedural' | 'manual'>('procedural');
+  const [manualClass, setManualClass] = useState<StarportClass>('C');
+
   // World parameters for PVS calculation (loaded from previous steps)
   const [habitabilityScore, setHabitabilityScore] = useState(0);
   const [techLevel, setTechLevel] = useState(10);
@@ -168,6 +185,61 @@ export function CreateWorldStarport() {
     setStarport(starportData);
     console.log("🚀 Generated complete starport:", starportData);
   }, [worldId, habitabilityScore, techLevel, wealth, developmentModifier]);
+
+  // Handle manual starport creation
+  const handleCreateManualStarport = useCallback(() => {
+    if (!worldId) {
+      console.error("No world ID available for manual starport creation");
+      return;
+    }
+
+    // Find the entry for the selected class
+    const starportEntry = STARPORT_CLASS_TABLE.find(
+      entry => entry.starportClass === manualClass
+    );
+
+    if (!starportEntry) {
+      console.error("Invalid starport class:", manualClass);
+      return;
+    }
+
+    // Roll for base presence
+    const bases = [];
+
+    // Naval Base (only for A and B class ports)
+    if (manualClass === 'A' || manualClass === 'B') {
+      bases.push(rollBasePresence(BaseType.NAVAL, manualClass));
+    }
+
+    // Scout Base (for A, B, C, and D class ports)
+    if (['A', 'B', 'C', 'D'].includes(manualClass)) {
+      bases.push(rollBasePresence(BaseType.SCOUT, manualClass));
+    }
+
+    // Pirate Base (for C, D, and E class ports)
+    if (['C', 'D', 'E'].includes(manualClass)) {
+      bases.push(rollBasePresence(BaseType.PIRATE, manualClass));
+    }
+
+    // Create starport with manual class (PVS = 0 for manual)
+    const now = new Date().toISOString();
+    const starportData: StarportData = {
+      id: uuidv4(),
+      worldId,
+      starportClass: manualClass,
+      portValueScore: 0, // Manual selection, no PVS calculation
+      label: starportEntry.label,
+      description: starportEntry.description,
+      capabilities: starportEntry.capabilities,
+      bases,
+      generationMethod: 'custom',
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    setStarport(starportData);
+    console.log("✍️ Created manual starport:", starportData);
+  }, [worldId, manualClass]);
 
   // Handle re-roll of specific base
   const handleRerollBase = useCallback((baseType: BaseType) => {
@@ -368,26 +440,98 @@ export function CreateWorldStarport() {
 
         {/* Main Content */}
         <div className="space-y-6">
-          {/* Generation Button */}
-          <Card className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border-blue-200 dark:border-blue-900">
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold mb-1 flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-blue-600" />
-                  Procedural Generation
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  Generate starport classification based on Port Value Score (PVS).
-                </p>
+          {/* Generation Mode Selection */}
+          <Card className="p-6">
+            <div className="space-y-4">
+              <div>
+                <Label className="text-base font-semibold mb-3 block">Generation Mode</Label>
+                <RadioGroup
+                  value={generationMode}
+                  onValueChange={(value) => setGenerationMode(value as 'procedural' | 'manual')}
+                  className="flex gap-6"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="procedural" id="procedural" />
+                    <Label htmlFor="procedural" className="cursor-pointer">
+                      Procedural (Based on PVS)
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="manual" id="manual" />
+                    <Label htmlFor="manual" className="cursor-pointer">
+                      Manual Selection
+                    </Label>
+                  </div>
+                </RadioGroup>
               </div>
-              <Button
-                onClick={handleGenerateStarport}
-                className="ml-4"
-                size="lg"
-              >
-                <Rocket className="h-4 w-4 mr-2" />
-                Generate Starport
-              </Button>
+
+              {/* Procedural Generation */}
+              {generationMode === 'procedural' && (
+                <Card className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border-blue-200 dark:border-blue-900">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold mb-1 flex items-center gap-2">
+                        <Sparkles className="h-5 w-5 text-blue-600" />
+                        Procedural Generation
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        Generate starport classification based on Port Value Score (PVS).
+                      </p>
+                    </div>
+                    <Button
+                      onClick={handleGenerateStarport}
+                      className="ml-4"
+                      size="lg"
+                    >
+                      <Rocket className="h-4 w-4 mr-2" />
+                      Generate Starport
+                    </Button>
+                  </div>
+                </Card>
+              )}
+
+              {/* Manual Selection */}
+              {generationMode === 'manual' && (
+                <Card className="p-6 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 border-purple-200 dark:border-purple-900">
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-lg font-semibold mb-1">Manual Selection</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Choose the starport class directly. Base presence will still be rolled.
+                      </p>
+                    </div>
+                    <div className="flex items-end gap-4">
+                      <div className="flex-1">
+                        <Label htmlFor="starport-class" className="mb-2 block">
+                          Starport Class
+                        </Label>
+                        <Select
+                          value={manualClass}
+                          onValueChange={(value) => setManualClass(value as StarportClass)}
+                        >
+                          <SelectTrigger id="starport-class" className="w-full">
+                            <SelectValue placeholder="Select starport class" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {getAllStarportClasses().map((cls) => (
+                              <SelectItem key={cls} value={cls}>
+                                Class {cls} - {getStarportClassLabel(cls)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button
+                        onClick={handleCreateManualStarport}
+                        size="lg"
+                      >
+                        <Rocket className="h-4 w-4 mr-2" />
+                        Create Starport
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              )}
             </div>
           </Card>
 
@@ -409,9 +553,15 @@ export function CreateWorldStarport() {
                           <p className="text-muted-foreground">{starport.description}</p>
                         </div>
                       </div>
-                      <Badge variant="outline" className={`${colors.badge} text-lg px-4 py-2`}>
-                        PVS: {starport.portValueScore}
-                      </Badge>
+                      {starport.generationMethod === 'procedural' ? (
+                        <Badge variant="outline" className={`${colors.badge} text-lg px-4 py-2`}>
+                          PVS: {starport.portValueScore}
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className={`${colors.badge} text-lg px-4 py-2`}>
+                          Manual Selection
+                        </Badge>
+                      )}
                     </div>
                   </CardHeader>
 
@@ -497,32 +647,34 @@ export function CreateWorldStarport() {
                   </div>
                 </div>
 
-                {/* PVS Breakdown */}
-                <Card className="p-6 bg-muted/50">
-                  <h3 className="font-semibold mb-4">Port Value Score Calculation</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    <div className="p-3 bg-background rounded-lg">
-                      <p className="text-muted-foreground mb-1">Habitability</p>
-                      <p className="font-semibold">{Math.floor(habitabilityScore / 4)}</p>
+                {/* PVS Breakdown - Only show for procedural generation */}
+                {starport.generationMethod === 'procedural' && (
+                  <Card className="p-6 bg-muted/50">
+                    <h3 className="font-semibold mb-4">Port Value Score Calculation</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <div className="p-3 bg-background rounded-lg">
+                        <p className="text-muted-foreground mb-1">Habitability</p>
+                        <p className="font-semibold">{Math.floor(habitabilityScore / 4)}</p>
+                      </div>
+                      <div className="p-3 bg-background rounded-lg">
+                        <p className="text-muted-foreground mb-1">Tech Level</p>
+                        <p className="font-semibold">{techLevel - 7}</p>
+                      </div>
+                      <div className="p-3 bg-background rounded-lg">
+                        <p className="text-muted-foreground mb-1">Wealth</p>
+                        <p className="font-semibold">{wealth >= 0 ? '+' : ''}{wealth}</p>
+                      </div>
+                      <div className="p-3 bg-background rounded-lg">
+                        <p className="text-muted-foreground mb-1">Development</p>
+                        <p className="font-semibold">{developmentModifier >= 0 ? '+' : ''}{developmentModifier}</p>
+                      </div>
                     </div>
-                    <div className="p-3 bg-background rounded-lg">
-                      <p className="text-muted-foreground mb-1">Tech Level</p>
-                      <p className="font-semibold">{techLevel - 7}</p>
+                    <div className="mt-4 pt-4 border-t text-center">
+                      <p className="text-sm text-muted-foreground mb-1">Total Port Value Score</p>
+                      <p className="text-3xl font-bold">{starport.portValueScore}</p>
                     </div>
-                    <div className="p-3 bg-background rounded-lg">
-                      <p className="text-muted-foreground mb-1">Wealth</p>
-                      <p className="font-semibold">{wealth >= 0 ? '+' : ''}{wealth}</p>
-                    </div>
-                    <div className="p-3 bg-background rounded-lg">
-                      <p className="text-muted-foreground mb-1">Development</p>
-                      <p className="font-semibold">{developmentModifier >= 0 ? '+' : ''}{developmentModifier}</p>
-                    </div>
-                  </div>
-                  <div className="mt-4 pt-4 border-t text-center">
-                    <p className="text-sm text-muted-foreground mb-1">Total Port Value Score</p>
-                    <p className="text-3xl font-bold">{starport.portValueScore}</p>
-                  </div>
-                </Card>
+                  </Card>
+                )}
               </div>
             );
           })()}

@@ -11,7 +11,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Info } from "lucide-react";
 import {
   Tooltip,
@@ -72,6 +71,7 @@ export function CreateHabitability() {
   const [hazardType, setHazardType] = useState("none");
   const [hazardIntensity, setHazardIntensity] = useState([50]);
   const [biochemicalResources, setBiochemicalResources] = useState("");
+  const [isLoaded, setIsLoaded] = useState(false);
 
   // Calculate modifiers
   const selectedPressure = ATMOSPHERIC_PRESSURES.find(
@@ -165,14 +165,15 @@ export function CreateHabitability() {
         console.error("Failed to load saved habitability data", e);
       }
     }
+    setIsLoaded(true);
   }, []);
 
-  // Auto-save
+  // Auto-save (only after initial load is complete)
   useEffect(() => {
-    if (isFormComplete) {
+    if (isLoaded && isFormComplete) {
       saveData();
     }
-  }, [saveData, isFormComplete]);
+  }, [saveData, isFormComplete, isLoaded]);
 
   // Handler for Next button
   const handleNext = useCallback(() => {
@@ -415,34 +416,177 @@ export function CreateHabitability() {
                 <div className="space-y-4">
                   <div>
                     <h3 className="text-sm font-semibold mb-2 text-muted-foreground uppercase tracking-wide">
-                      Tech Level Modifier
+                      Habitability Breakdown
                     </h3>
-                    <div className="space-y-1">
-                      <Skeleton className="h-3 w-full" />
-                      <Skeleton className="h-3 w-full" />
-                      <Skeleton className="h-3 w-2/3" />
+                    <div className="space-y-2 text-sm">
+                      {selectedPressure && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">
+                            Atmosphere ({selectedPressure.label}):
+                          </span>
+                          <span
+                            className={cn(
+                              "font-medium",
+                              selectedPressure.habitability > 0
+                                ? "text-green-600 dark:text-green-400"
+                                : selectedPressure.habitability < 0
+                                ? "text-red-600 dark:text-red-400"
+                                : ""
+                            )}
+                          >
+                            {selectedPressure.habitability >= 0 ? "+" : ""}
+                            {selectedPressure.habitability}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">
+                          Temperature ({getTemperatureLabel(temperature[0])}):
+                        </span>
+                        <span
+                          className={cn(
+                            "font-medium",
+                            getTemperatureHabitability(temperature[0]) > 0
+                              ? "text-green-600 dark:text-green-400"
+                              : getTemperatureHabitability(temperature[0]) < 0
+                              ? "text-red-600 dark:text-red-400"
+                              : ""
+                          )}
+                        >
+                          {getTemperatureHabitability(temperature[0]) >= 0
+                            ? "+"
+                            : ""}
+                          {getTemperatureHabitability(temperature[0])}
+                        </span>
+                      </div>
+                      {selectedHazard && hazardType !== "none" && (
+                        <>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">
+                              Hazard ({selectedHazard.label}):
+                            </span>
+                            <span className="font-medium text-red-600 dark:text-red-400">
+                              {selectedHazard.habitability}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">
+                              Intensity (
+                              {getHazardIntensityLabel(hazardIntensity[0])}):
+                            </span>
+                            <span
+                              className={cn(
+                                "font-medium",
+                                getHazardIntensityHabitability(
+                                  hazardIntensity[0]
+                                ) < 0
+                                  ? "text-red-600 dark:text-red-400"
+                                  : ""
+                              )}
+                            >
+                              {getHazardIntensityHabitability(
+                                hazardIntensity[0]
+                              ) >= 0
+                                ? "+"
+                                : ""}
+                              {getHazardIntensityHabitability(
+                                hazardIntensity[0]
+                              )}
+                            </span>
+                          </div>
+                        </>
+                      )}
+                      {selectedResources && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">
+                            Resources ({selectedResources.label}):
+                          </span>
+                          <span
+                            className={cn(
+                              "font-medium",
+                              selectedResources.habitability > 0
+                                ? "text-green-600 dark:text-green-400"
+                                : selectedResources.habitability < 0
+                                ? "text-red-600 dark:text-red-400"
+                                : ""
+                            )}
+                          >
+                            {selectedResources.habitability >= 0 ? "+" : ""}
+                            {selectedResources.habitability}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  <div>
+                  <div className="border-t pt-4">
                     <h3 className="text-sm font-semibold mb-2 text-muted-foreground uppercase tracking-wide">
-                      Population Modifier
+                      Required Tech Levels
                     </h3>
-                    <div className="space-y-1">
-                      <Skeleton className="h-3 w-full" />
-                      <Skeleton className="h-3 w-1/2" />
+                    <div className="space-y-2 text-sm">
+                      {selectedPressure &&
+                        selectedPressure.tl !== "-" &&
+                        selectedPressure.tl !== "0" && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">
+                              For {selectedPressure.label} atmosphere:
+                            </span>
+                            <span className="font-medium">
+                              TL {selectedPressure.tl}+
+                            </span>
+                          </div>
+                        )}
+                      {selectedResources && selectedResources.tl !== "-" && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">
+                            For {selectedResources.label} resources:
+                          </span>
+                          <span className="font-medium">
+                            TL {selectedResources.tl}+
+                          </span>
+                        </div>
+                      )}
+                      {(!selectedPressure ||
+                        selectedPressure.tl === "-" ||
+                        selectedPressure.tl === "0") &&
+                        (!selectedResources ||
+                          selectedResources.tl === "-") && (
+                          <span className="text-muted-foreground">
+                            No special requirements
+                          </span>
+                        )}
                     </div>
                   </div>
 
-                  <div>
+                  <div className="border-t pt-4">
                     <h3 className="text-sm font-semibold mb-2 text-muted-foreground uppercase tracking-wide">
-                      Habitability
+                      Total Habitability Score
                     </h3>
                     <div className="flex items-center gap-3">
-                      <div className="text-3xl font-bold">
+                      <div
+                        className={cn(
+                          "text-3xl font-bold",
+                          parseFloat(calculateHabitability()) > 0
+                            ? "text-green-600 dark:text-green-400"
+                            : parseFloat(calculateHabitability()) < 0
+                            ? "text-red-600 dark:text-red-400"
+                            : ""
+                        )}
+                      >
+                        {parseFloat(calculateHabitability()) >= 0 ? "+" : ""}
                         {calculateHabitability()}
                       </div>
-                      <Skeleton className="h-3 flex-1" />
+                      <span className="text-sm text-muted-foreground">
+                        {parseFloat(calculateHabitability()) >= 5
+                          ? "Excellent habitability"
+                          : parseFloat(calculateHabitability()) >= 2
+                          ? "Good habitability"
+                          : parseFloat(calculateHabitability()) >= 0
+                          ? "Average habitability"
+                          : parseFloat(calculateHabitability()) >= -3
+                          ? "Poor habitability"
+                          : "Hostile environment"}
+                      </span>
                     </div>
                   </div>
                 </div>

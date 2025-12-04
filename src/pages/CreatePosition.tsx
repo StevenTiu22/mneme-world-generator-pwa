@@ -112,6 +112,7 @@ export function CreatePosition() {
   const [hexGrid] = useState<HexPosition[]>(generateHexGrid());
   const [selectedHex, setSelectedHex] = useState<HexPosition | null>(null);
   const [auDistance, setAuDistance] = useState([50]);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   // Hex to pixel conversion
   const hexSize = 30;
@@ -162,14 +163,15 @@ export function CreatePosition() {
         console.error("Failed to load saved position data", e);
       }
     }
+    setIsLoaded(true);
   }, []);
 
-  // Auto-save
+  // Auto-save (only after initial load is complete)
   useEffect(() => {
-    if (isFormComplete) {
+    if (isLoaded && isFormComplete) {
       saveData();
     }
-  }, [saveData, isFormComplete]);
+  }, [saveData, isFormComplete, isLoaded]);
 
   // Handler for Next button
   const handleNext = useCallback(() => {

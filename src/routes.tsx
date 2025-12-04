@@ -14,6 +14,8 @@ import { CreateHabitability } from "./pages/CreateHabitability";
 import { CreateWorldStarport } from "./pages/CreateWorldStarport";
 import { CreatePosition } from "./pages/CreatePosition";
 import { CreateInhabitants } from "./pages/CreateInhabitants";
+import { CreateMoons } from "./pages/CreateMoons";
+import { CreateSecondaryPlanets } from "./pages/CreateSecondaryPlanets";
 import { CreatePlanetarySystem } from "./pages/CreatePlanetarySystem";
 
 export default function AppRoutes() {
@@ -35,6 +37,8 @@ export default function AppRoutes() {
         <Route path="world-starport" element={<CreateWorldStarport />} />
         <Route path="position" element={<CreatePosition />} />
         <Route path="inhabitants" element={<CreateInhabitants />} />
+        <Route path="moons" element={<CreateMoons />} />
+        <Route path="secondary-planets" element={<CreateSecondaryPlanets />} />
         <Route path="planetary-system" element={<CreatePlanetarySystem />} />
       </Route>
     </Routes>

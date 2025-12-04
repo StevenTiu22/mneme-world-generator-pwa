@@ -75,11 +75,24 @@ const ROUTE_CONFIG: Record<string, RouteConfig> = {
     showPrevious: true,
     showNext: true,
     previousPath: "/create-new/world-starport",
+    nextPath: "/create-new/moons",
+  },
+  "/create-new/moons": {
+    showPrevious: true,
+    showNext: true,
+    previousPath: "/create-new/position",
+    nextPath: "/create-new/secondary-planets",
+  },
+  "/create-new/secondary-planets": {
+    showPrevious: true,
+    showNext: true,
+    previousPath: "/create-new/moons",
+    nextPath: "/create-new/planetary-system",
   },
   "/create-new/planetary-system": {
     showPrevious: true,
     showNext: false,
-    previousPath: "/create-new/position",
+    previousPath: "/create-new/secondary-planets",
   },
 };
 

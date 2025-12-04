@@ -3,7 +3,7 @@ import { useNavigate, useOutletContext } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { getStellarProperty } from "@/lib/db/queries/stellarQueries";
-import { generateStarId } from "@/lib/db/queries/starQueries";
+import { generateStarId, generateSystemId } from "@/lib/db/queries/starQueries";
 import { generateStarName } from "@/lib/generators/primaryStarGenerator";
 import type {
   StellarClass as StellarClassType,
@@ -27,16 +27,23 @@ interface LayoutContext {
   setNextHandler: (handler: () => void) => void;
 }
 
+// Legacy interface for backward compatibility
 interface PrimaryStarData {
   name: string;
   class: StarClass;
   grade: number;
 }
 
+// Extended interface for localStorage with starSystemId
+interface PrimaryStarStorage extends StarData {
+  starSystemId: string;
+}
+
 export function CreatePrimaryStar() {
   const navigate = useNavigate();
   const context = useOutletContext<LayoutContext>();
   const [starId, setStarId] = useState(() => generateStarId());
+  const [starSystemId, setStarSystemId] = useState(() => generateSystemId());
   const [starName, setStarName] = useState(() => generateStarName());
   const [selectedClass, setSelectedClass] = useState<StarClass>("G");
   const [classGrade, setClassGrade] = useState(5);
@@ -95,7 +102,7 @@ export function CreatePrimaryStar() {
   // Save data to localStorage
   const saveData = useCallback(() => {
     const now = new Date().toISOString();
-    const fullStarData: StarData = {
+    const fullStarData: PrimaryStarStorage = {
       id: starId,
       name: starName,
       stellarClass: selectedClass as StellarClassType,
@@ -104,10 +111,12 @@ export function CreatePrimaryStar() {
       createdAt: createdAt,
       updatedAt: now,
       createdBy: "user",
+      starSystemId: starSystemId,
     };
     localStorage.setItem("primaryStar", JSON.stringify(fullStarData));
   }, [
     starId,
+    starSystemId,
     starName,
     selectedClass,
     classGrade,
@@ -122,14 +131,19 @@ export function CreatePrimaryStar() {
       try {
         const data = JSON.parse(saved);
         if ("stellarClass" in data) {
-          const starData = data as StarData;
-          setStarId(starData.id);
-          setStarName(starData.name);
+          const starData = data as Partial<PrimaryStarStorage>;
+          setStarId(starData.id!);
+          setStarName(starData.name!);
           setSelectedClass(starData.stellarClass as StarClass);
-          setClassGrade(starData.stellarGrade);
-          setGenerationMethod(starData.generationMethod);
-          setCreatedAt(starData.createdAt);
+          setClassGrade(starData.stellarGrade!);
+          setGenerationMethod(starData.generationMethod!);
+          setCreatedAt(starData.createdAt!);
+          // Load starSystemId if it exists, otherwise keep the generated one
+          if (starData.starSystemId) {
+            setStarSystemId(starData.starSystemId);
+          }
         } else if ("class" in data) {
+          // Legacy format support
           const oldData = data as PrimaryStarData;
           setStarName(oldData.name);
           setSelectedClass(oldData.class);

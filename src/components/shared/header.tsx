@@ -1,6 +1,5 @@
 import logo from "@/assets/230109-game-in-the-brain-logo-e1723817632320-150x150.png";
-import { Search, Sun, Moon } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { Sun, Moon } from "lucide-react";
 import {
   NavigationMenu,
   NavigationMenuList,
@@ -55,14 +54,6 @@ export function Header() {
           </NavigationMenuList>
 
           <div className="flex items-center gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search..."
-                type="text"
-                className="w-96 pl-10 rounded-xl"
-              />
-            </div>
             <Button
               variant="outline"
               size="icon"
