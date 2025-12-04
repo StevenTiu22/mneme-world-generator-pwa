@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Button } from "@/components/ui/button";
@@ -30,19 +30,21 @@ import {
   FileSpreadsheet,
   Trash2,
 } from "lucide-react";
-import type { StarData, StarSystem } from "@/models/stellar/types/interface";
+import type { StarSystem } from "@/models/stellar/types/interface";
 import {
   STELLAR_MASS,
   STELLAR_LUMINOSITY,
 } from "@/models/stellar/data/constants";
-import type { StellarClass, StellarGrade } from "@/models/stellar/types/enums";
-import { GenerationMethod } from "@/models/common/types";
 import {
   downloadStarSystemAsJSON,
   downloadStarSystemAsCSV,
 } from "@/lib/export/starExport";
 import { importStarSystemFromFile } from "@/lib/import/starImport";
-import { getAllStarSystems, generateSystemId, deleteStarSystem } from "@/lib/db/queries/starQueries";
+import {
+  getAllStarSystems,
+  deleteStarSystem,
+} from "@/lib/db/queries/starQueries";
+import { getAllWorlds } from "@/lib/db/queries/worldQueries";
 
 interface SavedWorld {
   id: string;
@@ -60,6 +62,7 @@ interface SavedWorld {
     mass: string;
   }>;
   mainWorld: {
+    name: string;
     type: string;
     size: string;
   };
@@ -85,52 +88,92 @@ export function MyWorlds() {
   // Load star systems from IndexedDB with reactive updates
   const starSystems = useLiveQuery(() => getAllStarSystems());
 
+  // Load all worlds data
+  const allWorlds = useLiveQuery(() => getAllWorlds());
+
+  // Debug: Log what allWorlds contains
+  console.log(
+    "🔍 MyWorlds render - allWorlds:",
+    allWorlds?.length ?? 0,
+    "worlds"
+  );
+
+  // Wait for data to load before processing
+  const isLoading = !starSystems || !allWorlds;
+
   // Convert StarSystem[] to SavedWorld[] for display
-  const worlds: SavedWorld[] = (starSystems ?? []).map((system) => {
-    const stellarClass = system.primaryStar.stellarClass;
-    const stellarGrade = system.primaryStar.stellarGrade;
+  const worlds: SavedWorld[] = isLoading
+    ? []
+    : (starSystems ?? []).map((system) => {
+        const stellarClass = system.primaryStar.stellarClass;
+        const stellarGrade = system.primaryStar.stellarGrade;
 
-    // Get actual stellar properties from lookup tables
-    const mass = STELLAR_MASS[stellarClass][stellarGrade];
-    const luminosity = STELLAR_LUMINOSITY[stellarClass][stellarGrade];
+        // Get actual stellar properties from lookup tables
+        const mass = STELLAR_MASS[stellarClass][stellarGrade];
+        const luminosity = STELLAR_LUMINOSITY[stellarClass][stellarGrade];
 
-    return {
-      id: system.id,
-      name: system.name,
-      primaryStar: {
-        name: system.primaryStar.name,
-        class: `${stellarClass}${stellarGrade}`,
-        luminosity: `${luminosity.toFixed(2)} L☉`,
-        mass: `${mass.toFixed(2)} M☉`,
-      },
-      companionStars: system.companionStars.map((companion) => {
-        const compClass = companion.stellarClass;
-        const compGrade = companion.stellarGrade;
-        const compMass = STELLAR_MASS[compClass][compGrade];
-        const compLuminosity = STELLAR_LUMINOSITY[compClass][compGrade];
+        // Get main world data for this system (use first world if available)
+        const systemWorlds = (allWorlds || []).filter(
+          (world) => world.starSystemId === system.id
+        );
+        const mainWorldData = systemWorlds[0];
+
+        // Debug logging
+        console.log(`🔍 System "${system.name}" (${system.id}):`, {
+          systemWorldsCount: systemWorlds.length,
+          hasMainWorld: !!mainWorldData,
+          mainWorldType: mainWorldData?.type,
+          mainWorldSize: mainWorldData?.size,
+        });
 
         return {
-          name: companion.name,
-          class: `${compClass}${compGrade}`,
-          luminosity: `${compLuminosity.toFixed(2)} L☉`,
-          mass: `${compMass.toFixed(2)} M☉`,
+          id: system.id,
+          name: system.name,
+          primaryStar: {
+            name: system.primaryStar.name,
+            class: `${stellarClass}${stellarGrade}`,
+            luminosity: `${luminosity.toFixed(2)} L☉`,
+            mass: `${mass.toFixed(2)} M☉`,
+          },
+          companionStars:
+            system.companionStars.length > 0
+              ? system.companionStars.map((companion) => {
+                  const compClass = companion.stellarClass;
+                  const compGrade = companion.stellarGrade;
+                  const compMass = STELLAR_MASS[compClass][compGrade];
+                  const compLuminosity =
+                    STELLAR_LUMINOSITY[compClass][compGrade];
+
+                  return {
+                    name: companion.name,
+                    class: `${compClass}${compGrade}`,
+                    luminosity: `${compLuminosity.toFixed(2)} L☉`,
+                    mass: `${compMass.toFixed(2)} M☉`,
+                  };
+                })
+              : [],
+          mainWorld: {
+            name: mainWorldData?.name || "Primary World",
+            type: mainWorldData?.type || "Habitat",
+            size: mainWorldData
+              ? `${Number(mainWorldData.size).toFixed(1)} EM`
+              : "1.0 EM",
+          },
+          systemType:
+            system.companionStars.length > 0
+              ? `${system.companionStars.length + 1}-Star System`
+              : "Single Star",
+          techLevel: mainWorldData?.techLevel
+            ? `TL ${mainWorldData.techLevel}`
+            : "Space Age",
+          habitability: mainWorldData?.habitabilityScore
+            ? `${Number(mainWorldData.habitabilityScore).toFixed(1)}/10`
+            : "Not set",
+          position: "1.0 AU", // Position data would need to be added to WorldData interface
+          createdAt: new Date(system.createdAt).toLocaleString(),
+          lastModified: new Date(system.updatedAt).toLocaleString(),
         };
-      }),
-      mainWorld: {
-        type: "Habitat", // Placeholder - extend when world data is added
-        size: "1.0 EM",  // Placeholder
-      },
-      systemType:
-        system.companionStars.length > 0
-          ? `${system.companionStars.length + 1}-Star System`
-          : "Single Star",
-      techLevel: "Space Age", // Placeholder - extend when tech level is added
-      habitability: "Not set",  // Placeholder - extend when habitability is added
-      position: "1.0 AU",       // Placeholder - extend when position is added
-      createdAt: new Date(system.createdAt).toLocaleString(),
-      lastModified: new Date(system.updatedAt).toLocaleString(),
-    };
-  });
+      });
 
   const sortWorlds = (worldsList: SavedWorld[]) => {
     const sorted = [...worldsList];
@@ -151,7 +194,7 @@ export function MyWorlds() {
   // Get the StarSystem for the selected world from the database
   const getSelectedStarSystem = (): StarSystem | null => {
     if (!selectedWorld || !starSystems) return null;
-    return starSystems.find(sys => sys.id === selectedWorld.id) ?? null;
+    return starSystems.find((sys) => sys.id === selectedWorld.id) ?? null;
   };
 
   const handleExportJSON = () => {
@@ -215,7 +258,9 @@ export function MyWorlds() {
       }
     } catch (error) {
       console.error("Failed to import star system:", error);
-      setImportError("Failed to import star system. Please check the file format.");
+      setImportError(
+        "Failed to import star system. Please check the file format."
+      );
     }
 
     // Reset file input
@@ -228,7 +273,9 @@ export function MyWorlds() {
     if (selectedWorld && editedName.trim()) {
       try {
         // Update the system name in the database
-        const { updateStarSystem } = await import("@/lib/db/queries/starQueries");
+        const { updateStarSystem } = await import(
+          "@/lib/db/queries/starQueries"
+        );
         await updateStarSystem(selectedWorld.id, { name: editedName.trim() });
 
         // Update local state
@@ -337,7 +384,17 @@ export function MyWorlds() {
           <Card
             key={world.id}
             className="cursor-pointer transition-all hover:shadow-lg hover:border-primary/50"
-            onClick={() => setSelectedWorld(world)}
+            onClick={() => {
+              console.log("🎯 World card clicked:", {
+                worldId: world.id,
+                worldName: world.name,
+                mainWorldType: world.mainWorld.type,
+                mainWorldSize: world.mainWorld.size,
+                techLevel: world.techLevel,
+                habitability: world.habitability,
+              });
+              setSelectedWorld(world);
+            }}
           >
             <CardContent className="p-6">
               <h2 className="text-2xl font-bold mb-4">{world.name}</h2>
@@ -348,11 +405,18 @@ export function MyWorlds() {
                   <span>{world.primaryStar.name}</span>
                 </div>
 
-                {world.companionStars.length > 0 && (
+                {world.companionStars && world.companionStars.length > 0 && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground pl-6">
                     <Star className="h-3 w-3" />
                     <span>
-                      + {world.companionStars.length} companion{world.companionStars.length > 1 ? 's' : ''}
+                      + {world.companionStars.length} companion
+                      {world.companionStars.length > 1 ? "s" : ""}:
+                      {world.companionStars.map((companion, idx) => (
+                        <span key={idx} className="ml-1">
+                          {companion.name}
+                          {idx < world.companionStars.length - 1 ? ", " : ""}
+                        </span>
+                      ))}
                     </span>
                   </div>
                 )}
@@ -541,45 +605,107 @@ export function MyWorlds() {
               </Card>
 
               {/* Companion Stars Section */}
-              {selectedWorld.companionStars.length > 0 && (
-                <div className="mt-6">
-                  <h3 className="text-xl font-bold mb-4">Companion Stars</h3>
-                  <div className="space-y-4">
-                    {selectedWorld.companionStars.map((companion, idx) => (
-                      <Card
-                        key={idx}
-                        className="overflow-hidden bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900"
-                      >
-                        <CardContent className="p-6">
-                          <div className="flex items-center justify-between mb-4">
-                            <h4 className="text-xl font-bold text-white">
-                              {companion.name}
-                            </h4>
-                            <Badge className="bg-purple-500/20 text-purple-200 border-purple-400/30">
-                              {companion.class}
-                            </Badge>
-                          </div>
+              {selectedWorld.companionStars &&
+                selectedWorld.companionStars.length > 0 && (
+                  <div className="mt-6">
+                    <h3 className="text-xl font-bold mb-4">Companion Stars</h3>
+                    <div className="space-y-4">
+                      {selectedWorld.companionStars.map((companion, idx) => (
+                        <Card
+                          key={idx}
+                          className="overflow-hidden bg-gradient-to-br from-slate-900 via-purple-950 to-slate-900"
+                        >
+                          <CardContent className="p-6">
+                            <div className="flex items-center justify-between mb-4">
+                              <h4 className="text-xl font-bold text-white">
+                                {companion.name}
+                              </h4>
+                              <Badge className="bg-purple-500/20 text-purple-200 border-purple-400/30">
+                                {companion.class}
+                              </Badge>
+                            </div>
 
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <h5 className="text-sm text-white/60 mb-2">
-                                Luminosity
-                              </h5>
-                              <p className="text-sm text-white">
-                                {companion.luminosity}
-                              </p>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <h5 className="text-sm text-white/60 mb-2">
+                                  Luminosity
+                                </h5>
+                                <p className="text-sm text-white">
+                                  {companion.luminosity}
+                                </p>
+                              </div>
+                              <div>
+                                <h5 className="text-sm text-white/60 mb-2">
+                                  Mass
+                                </h5>
+                                <p className="text-sm text-white">
+                                  {companion.mass}
+                                </p>
+                              </div>
                             </div>
-                            <div>
-                              <h5 className="text-sm text-white/60 mb-2">Mass</h5>
-                              <p className="text-sm text-white">{companion.mass}</p>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+
+              {/* Main World Section */}
+              <div className="mt-6">
+                <h3 className="text-xl font-bold mb-4">Main World</h3>
+                <Card className="overflow-hidden bg-gradient-to-br from-emerald-900 via-teal-950 to-emerald-900">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-4">
+                        {/* World Visualization */}
+                        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-emerald-300 to-teal-500 shadow-lg shadow-emerald-500/30" />
+                        <div>
+                          <h4 className="text-xl font-bold text-white">
+                            {selectedWorld.mainWorld.name || "Primary World"}
+                          </h4>
+                          <p className="text-sm text-white/60 capitalize">
+                            {selectedWorld.mainWorld.type}
+                          </p>
+                        </div>
+                      </div>
+                      <Badge className="bg-emerald-500/20 text-emerald-200 border-emerald-400/30 capitalize">
+                        {selectedWorld.mainWorld.type}
+                      </Badge>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-white">
+                      <div>
+                        <h5 className="text-sm text-white/60 mb-1">Size</h5>
+                        <p className="text-sm font-medium">
+                          {selectedWorld.mainWorld.size}
+                        </p>
+                      </div>
+                      <div>
+                        <h5 className="text-sm text-white/60 mb-1">
+                          Tech Level
+                        </h5>
+                        <p className="text-sm font-medium">
+                          {selectedWorld.techLevel}
+                        </p>
+                      </div>
+                      <div>
+                        <h5 className="text-sm text-white/60 mb-1">
+                          Habitability
+                        </h5>
+                        <p className="text-sm font-medium">
+                          {selectedWorld.habitability}
+                        </p>
+                      </div>
+                      <div>
+                        <h5 className="text-sm text-white/60 mb-1">Position</h5>
+                        <p className="text-sm font-medium">
+                          {selectedWorld.position}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
 
               {/* Action Buttons */}
               <div className="flex justify-between items-center gap-3 mt-6">
@@ -595,7 +721,11 @@ export function MyWorlds() {
 
                 {/* Export Buttons */}
                 <div className="flex gap-3">
-                  <Button onClick={handleExportJSON} variant="default" size="lg">
+                  <Button
+                    onClick={handleExportJSON}
+                    variant="default"
+                    size="lg"
+                  >
                     <FileJson className="h-5 w-5 mr-2" />
                     Export JSON
                   </Button>

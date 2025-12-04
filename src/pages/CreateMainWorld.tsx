@@ -1,9 +1,17 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate, useOutletContext } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Pencil, Check, X, Info, Shuffle, AlertCircle, Dices } from "lucide-react";
+import {
+  Pencil,
+  Check,
+  X,
+  Info,
+  Shuffle,
+  AlertCircle,
+  Dices,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 // Dice rolling utilities no longer needed for basic world generation on this page
 import {
@@ -23,13 +31,15 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { generateWorld } from "@/lib/generators/worldGenerator";
-import { saveWorld } from "@/lib/db/queries/worldQueries";
-import { WorldType as WorldTypeEnum, type WorldData, type WorldDiceRolls } from "@/models/world";
+import {
+  WorldType as WorldTypeEnum,
+  type WorldDiceRolls,
+} from "@/models/world";
 import { GenerationMethod } from "@/models/common/types";
 // Advanced world table functions removed - will be used in dedicated wizard pages
 
 // Types based on Mneme documentation
-type WorldType = "habitat" | "terrestrial" | "dwarf" | "random";
+type WorldType = "habitat" | "terrestrial" | "dwarf";
 
 // Size values from documentation (2D6 roll results)
 interface SizeOption {
@@ -306,13 +316,15 @@ export function CreateMainWorld() {
 
   // Database and generation tracking
   const [worldId, setWorldId] = useState<string | null>(null);
-  const [generationMethod, setGenerationMethod] = useState<GenerationMethod | null>(null);
-  const [diceRolls, setDiceRolls] = useState<MainWorldData['diceRolls']>(undefined);
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [generationMethod, setGenerationMethod] =
+    useState<GenerationMethod | null>(null);
+  const [diceRolls, setDiceRolls] =
+    useState<MainWorldData["diceRolls"]>(undefined);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   // Get appropriate size options based on world type
   const sizeOptions = useMemo(() => {
-    if (!selectedType || selectedType === "random") return [];
+    if (!selectedType) return [];
     if (selectedType === "habitat") return HABITAT_SIZES;
     if (selectedType === "dwarf") return DWARF_SIZES;
     if (selectedType === "terrestrial") return TERRESTRIAL_SIZES;
@@ -341,7 +353,6 @@ export function CreateMainWorld() {
   // Determine if form is complete
   const isFormComplete = useMemo(() => {
     if (!selectedType) return false;
-    if (selectedType === "random") return true;
     if (!worldSize) return false;
     if (selectedType === "habitat") return true; // Habitat doesn't need gravity or type
     if (!gravity) return false;
@@ -448,7 +459,7 @@ export function CreateMainWorld() {
   // Note: Re-roll functions for advanced properties removed
   // Those will be implemented on dedicated wizard pages in future phases
 
-  // Save data to localStorage and database
+  // Save data to localStorage
   const saveData = useCallback(() => {
     const data: MainWorldData = {
       name: worldName,
@@ -462,85 +473,19 @@ export function CreateMainWorld() {
       diceRolls: diceRolls,
     };
     localStorage.setItem("mainWorld", JSON.stringify(data));
-  }, [worldName, selectedType, worldSize, gravity, lesserEarthType, techLevel, worldId, generationMethod, diceRolls]);
-
-  // Database autosave (debounced)
-  const saveToDatabase = useCallback(async () => {
-    if (!selectedType || selectedType === "random") return;
-    if (!worldSize) return;
-
-    try {
-      const starSystemId = getStarSystemId();
-      const techLevelNum = parseInt(techLevel) || 10;
-
-      // Map local WorldType to WorldTypeEnum
-      const typeMap: Record<WorldType, string> = {
-        habitat: WorldTypeEnum.HABITAT,
-        terrestrial: WorldTypeEnum.TERRESTRIAL,
-        dwarf: WorldTypeEnum.DWARF,
-        random: WorldTypeEnum.TERRESTRIAL,
-      };
-
-      // Parse numeric values
-      const sizeNum = parseInt(worldSize) || 7;
-      const gravityNum = parseFloat(gravity) || 1.0;
-
-      const worldData: WorldData = {
-        id: worldId || `world-${Date.now()}`,
-        name: worldName,
-        starSystemId,
-        type: typeMap[selectedType] as any,
-        size: sizeNum,
-        mass: 1.0, // Will be calculated properly in the future
-        gravity: gravityNum,
-        composition: lesserEarthType ? (lesserEarthType as any) : undefined,
-        techLevel: techLevelNum,
-        generationMethod: generationMethod || GenerationMethod.CUSTOM,
-        diceRolls: diceRolls,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        createdBy: "user",
-      };
-
-      // Save to database
-      const savedWorld = await saveWorld(worldData);
-      setWorldId(savedWorld.id);
-
-      console.log("💾 World saved to database:", savedWorld.name);
-    } catch (error) {
-      console.error("Failed to save world to database:", error);
-    }
   }, [
+    worldName,
     selectedType,
     worldSize,
     gravity,
-    worldName,
     lesserEarthType,
     techLevel,
     worldId,
     generationMethod,
     diceRolls,
-    getStarSystemId,
   ]);
 
-  // Debounced database save
-  useEffect(() => {
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-    }
-
-    saveTimeoutRef.current = setTimeout(() => {
-      saveToDatabase();
-    }, 1000); // Save after 1 second of inactivity
-
-    return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
-    };
-  }, [saveToDatabase]);
-
-  // Load saved data from localStorage and database
+  // Load saved data from localStorage
   useEffect(() => {
     const loadData = async () => {
       const saved = localStorage.getItem("mainWorld");
@@ -556,7 +501,8 @@ export function CreateMainWorld() {
 
           // Load generation metadata if available
           if (data.worldId) setWorldId(data.worldId);
-          if (data.generationMethod) setGenerationMethod(data.generationMethod as GenerationMethod);
+          if (data.generationMethod)
+            setGenerationMethod(data.generationMethod as GenerationMethod);
           if (data.diceRolls) setDiceRolls(data.diceRolls);
 
           console.log("✅ Loaded world data from localStorage");
@@ -564,6 +510,8 @@ export function CreateMainWorld() {
           console.error("Failed to load saved main world data", e);
         }
       }
+
+      setIsLoaded(true);
 
       // Also try to load tech level from world context
       const worldContext = localStorage.getItem("worldContext");
@@ -582,10 +530,12 @@ export function CreateMainWorld() {
     loadData();
   }, []);
 
-  // Auto-save
+  // Auto-save (only after initial load is complete)
   useEffect(() => {
-    saveData();
-  }, [saveData]);
+    if (isLoaded) {
+      saveData();
+    }
+  }, [saveData, isLoaded]);
 
   // Handler for Next button
   const handleNext = useCallback(() => {
@@ -627,7 +577,8 @@ export function CreateMainWorld() {
             Main World: Basic Properties
           </h1>
           <p className="text-muted-foreground">
-            Configure the type, size, and composition of your primary world. Press{" "}
+            Configure the type, size, and composition of your primary world.
+            Press{" "}
             <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500">
               R
             </kbd>{" "}
@@ -691,7 +642,7 @@ export function CreateMainWorld() {
         </div>
 
         {/* Alert if incomplete */}
-        {selectedType && !isFormComplete && selectedType !== "random" && (
+        {selectedType && !isFormComplete && (
           <Alert className="mb-6">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
@@ -811,19 +762,10 @@ export function CreateMainWorld() {
                 <TooltipTrigger asChild>
                   <Card
                     role="button"
-                    onClick={() => handleTypeSelect("random")}
-                    className={cn(
-                      "h-40 cursor-pointer transition-all hover:border-primary/50 relative",
-                      selectedType === "random" &&
-                        "border-primary border-2 bg-primary/5"
-                    )}
+                    onClick={handleRandom}
+                    className="h-40 cursor-pointer transition-all hover:border-primary/50 hover:border-primary/70 relative"
                   >
                     <CardContent className="h-full flex flex-col items-center justify-center p-6">
-                      {selectedType === "random" && (
-                        <div className="absolute top-3 right-3 h-6 w-6 rounded-full border-2 border-primary bg-primary flex items-center justify-center">
-                          <Check className="h-4 w-4 text-primary-foreground" />
-                        </div>
-                      )}
                       <Shuffle className="h-8 w-8 mb-2" />
                       <h3 className="text-xl font-semibold">Random</h3>
                       <p className="text-xs text-muted-foreground mt-2 text-center">
@@ -833,12 +775,15 @@ export function CreateMainWorld() {
                   </Card>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Let the system randomly generate a world</p>
+                  <p>
+                    Let the system randomly generate a world using Mneme dice
+                    rules
+                  </p>
                 </TooltipContent>
               </Tooltip>
             </div>
 
-            {selectedType && selectedType !== "random" && (
+            {selectedType && (
               <div className="mt-6">
                 <Button
                   variant="outline"
@@ -846,7 +791,7 @@ export function CreateMainWorld() {
                   onClick={handleRandom}
                 >
                   <Dices className="h-4 w-4 mr-2" />
-                  Generate Random World (Mneme Dice)
+                  Re-roll Random World (Mneme Dice)
                 </Button>
                 <p className="text-xs text-muted-foreground text-center mt-2">
                   Uses 2D6 dice rolls following Mneme rules
@@ -857,7 +802,7 @@ export function CreateMainWorld() {
 
           {/* Right Column: Form Fields */}
           <div className="space-y-6">
-            {selectedType && selectedType !== "random" && (
+            {selectedType && (
               <>
                 {/* World Size */}
                 <div>
@@ -1024,69 +969,72 @@ export function CreateMainWorld() {
                   </Card>
                 )}
 
-
                 {/* Dice Rolls Display (if procedurally generated) */}
-                {diceRolls && generationMethod === GenerationMethod.PROCEDURAL && (
-                  <Card className="p-6 bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-900">
-                    <h3 className="font-semibold mb-4 flex items-center gap-2">
-                      <Badge variant="outline" className="border-blue-600 text-blue-600">
-                        <Dices className="h-3 w-3 mr-1" />
-                        Procedural Generation
-                      </Badge>
-                    </h3>
-                    <div className="space-y-2 text-sm">
-                      <div className="font-semibold text-xs text-muted-foreground uppercase mb-2">
-                        Basic World Properties
+                {diceRolls &&
+                  generationMethod === GenerationMethod.PROCEDURAL && (
+                    <Card className="p-6 bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-900">
+                      <h3 className="font-semibold mb-4 flex items-center gap-2">
+                        <Badge
+                          variant="outline"
+                          className="border-blue-600 text-blue-600"
+                        >
+                          <Dices className="h-3 w-3 mr-1" />
+                          Procedural Generation
+                        </Badge>
+                      </h3>
+                      <div className="space-y-2 text-sm">
+                        <div className="font-semibold text-xs text-muted-foreground uppercase mb-2">
+                          Basic World Properties
+                        </div>
+                        {diceRolls.typeRoll && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">
+                              Type Roll (2D6):
+                            </span>
+                            <span className="font-mono font-semibold">
+                              {diceRolls.typeRoll}
+                            </span>
+                          </div>
+                        )}
+                        {diceRolls.sizeRoll && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">
+                              Size Roll (2D6):
+                            </span>
+                            <span className="font-mono font-semibold">
+                              {diceRolls.sizeRoll}
+                            </span>
+                          </div>
+                        )}
+                        {diceRolls.gravityRoll && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">
+                              Gravity Roll (2D6):
+                            </span>
+                            <span className="font-mono font-semibold">
+                              {diceRolls.gravityRoll}
+                            </span>
+                          </div>
+                        )}
+                        {diceRolls.compositionRoll && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">
+                              Composition Roll (2D6):
+                            </span>
+                            <span className="font-mono font-semibold">
+                              {diceRolls.compositionRoll}
+                            </span>
+                          </div>
+                        )}
+
+                        <p className="text-xs text-muted-foreground mt-3 pt-3 border-t">
+                          Generated using Mneme World Generator rules. Edit any
+                          field to switch to custom mode.
+                        </p>
                       </div>
-                      {diceRolls.typeRoll && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Type Roll (2D6):</span>
-                          <span className="font-mono font-semibold">{diceRolls.typeRoll}</span>
-                        </div>
-                      )}
-                      {diceRolls.sizeRoll && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Size Roll (2D6):</span>
-                          <span className="font-mono font-semibold">{diceRolls.sizeRoll}</span>
-                        </div>
-                      )}
-                      {diceRolls.gravityRoll && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Gravity Roll (2D6):</span>
-                          <span className="font-mono font-semibold">{diceRolls.gravityRoll}</span>
-                        </div>
-                      )}
-                      {diceRolls.compositionRoll && (
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Composition Roll (2D6):</span>
-                          <span className="font-mono font-semibold">{diceRolls.compositionRoll}</span>
-                        </div>
-                      )}
-
-                      <p className="text-xs text-muted-foreground mt-3 pt-3 border-t">
-                        Generated using Mneme World Generator rules. Edit any field to switch to custom mode.
-                      </p>
-                    </div>
-                  </Card>
-                )}
+                    </Card>
+                  )}
               </>
-            )}
-
-            {selectedType === "random" && (
-              <Card className="p-8 bg-muted/50">
-                <div className="text-center space-y-4">
-                  <Shuffle className="h-16 w-16 mx-auto text-muted-foreground" />
-                  <div>
-                    <h3 className="text-lg font-semibold mb-2">
-                      Random Generation
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                      The system will procedurally generate a main world based
-                      on astronomical probabilities when you proceed.
-                    </p>
-                  </div>
-                </div>
-              </Card>
             )}
 
             {!selectedType && (
@@ -1103,8 +1051,8 @@ export function CreateMainWorld() {
         <div className="mt-8 p-4 bg-muted/30 rounded-lg">
           <p className="text-sm text-muted-foreground text-center">
             The main world is the most hospitable and significant world in your
-            system. Habitability, culture, and starport details will be configured
-            in the following wizard steps.
+            system. Habitability, culture, and starport details will be
+            configured in the following wizard steps.
           </p>
         </div>
       </div>

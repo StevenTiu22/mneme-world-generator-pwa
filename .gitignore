@@ -26,3 +26,5 @@ docs
 *.sw?
 .claude
 CLAUDE.md
+INSTRUCTIONS.md
+.kilocode

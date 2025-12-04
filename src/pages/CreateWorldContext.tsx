@@ -18,6 +18,7 @@ import { StellarZonesDisplay } from "@/components/stellar/StellarZonesDisplay";
 import { calculateStellarZonesFromClassGrade } from "@/lib/stellar/zoneCalculations";
 import { useLiveQuery } from "dexie-react-hooks";
 import { getStellarProperty } from "@/lib/db/queries/stellarQueries";
+import { generateSystemId } from "@/lib/db/queries/starQueries";
 import {
   WORLD_DEVELOPMENT_LEVELS,
   determineWorldDevelopment,
@@ -84,6 +85,7 @@ interface CompanionStarData {
 
 interface WorldContextData {
   techLevel: string;
+  starSystemId: string;
   advantages: string[];
   disadvantages: string[];
 }
@@ -120,8 +122,13 @@ export function CreateWorldContext() {
 
   // Save data
   const saveData = useCallback(() => {
+    // Get starSystemId from primary star data
+    const primaryStarRaw = localStorage.getItem("primaryStar");
+    const primaryStar = primaryStarRaw ? JSON.parse(primaryStarRaw) : null;
+
     const data: WorldContextData = {
       techLevel,
+      starSystemId: primaryStar?.starSystemId || generateSystemId(),
       advantages: [], // These would be populated from user input
       disadvantages: [], // These would be populated from user input
     };
@@ -273,7 +280,7 @@ export function CreateWorldContext() {
                     <div className="space-y-1">
                       {companionStars.companions.map((companion, idx) => (
                         <p key={idx} className="text-sm text-muted-foreground">
-                          • {companion.name} at {companion.orbitalDistance.toFixed(1)} AU
+                          • {companion.name} at {companion.orbitalDistance?.toFixed(1) ?? 'N/A'} AU
                         </p>
                       ))}
                     </div>

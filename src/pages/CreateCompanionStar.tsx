@@ -374,9 +374,12 @@ export function CreateCompanionStar() {
         createdBy: "user",
       }));
 
+      // Get starSystemId from primaryStar (set in CreatePrimaryStar)
+      const starSystemId = (primaryStarData as any).starSystemId || generateSystemId();
+
       // Create StarSystem object
       const starSystem: StarSystem = {
-        id: generateSystemId(),
+        id: starSystemId,
         name: `${primaryStarData.name} System`,
         primaryStar: primaryStarData,
         companionStars: companionStars,
@@ -406,8 +409,14 @@ export function CreateCompanionStar() {
 
   // Handler for Next button (continue to main world)
   const handleNext = useCallback(() => {
+    // Get starSystemId from primary star
+    const primaryStarRaw = localStorage.getItem("primaryStar");
+    const primaryStar = primaryStarRaw ? JSON.parse(primaryStarRaw) : null;
+    const starSystemId = primaryStar?.starSystemId;
+
     // Save companion star data to localStorage
     const data = {
+      starSystemId: starSystemId,
       companions: companions.map((comp) => ({
         id: comp.id,
         name: comp.name,

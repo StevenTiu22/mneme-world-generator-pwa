@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useLiveQuery } from "dexie-react-hooks";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,14 +12,24 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { saveWorld } from "@/lib/db/queries/worldQueries";
+import { getMoonsByWorld } from "@/lib/db/queries/moonQueries";
+import { getPlanetsByStarSystem } from "@/lib/db/queries/planetQueries";
+import {
+  saveStarSystem,
+  generateSystemId,
+  generateStarId,
+} from "@/lib/db/queries/starQueries";
 import type { WorldData } from "@/models/world/interface";
+import type { StarSystem, StarData } from "@/models/stellar/types/interface";
+import type { StellarClass, StellarGrade } from "@/models/stellar/types/enums";
 import { GenerationMethod } from "@/models/common/types";
+import { getMoonTypeLabel } from "@/models/world/moon";
+import { getPlanetTypeLabel } from "@/models/world/planet";
 
 interface CelestialBody {
   id: string;
   type: "star" | "world" | "disk";
   name: string;
-  luminosity?: string;
   size?: string;
   position?: string;
   modifiers: string[];
@@ -34,6 +45,29 @@ export function CreatePlanetarySystem() {
   const [summaryOpen, setSummaryOpen] = useState(true);
   const [worldSummary, setWorldSummary] = useState<any>(null);
 
+  // Load moons and planets from database
+  const mainWorldData = localStorage.getItem("mainWorld");
+  const worldContextData = localStorage.getItem("worldContext");
+  const worldId = mainWorldData ? JSON.parse(mainWorldData).worldId : null;
+  const starSystemId = worldContextData
+    ? JSON.parse(worldContextData).starSystemId
+    : null;
+
+  const moons =
+    useLiveQuery(
+      () => (worldId ? getMoonsByWorld(worldId) : Promise.resolve([])),
+      [worldId]
+    ) || [];
+
+  const planets =
+    useLiveQuery(
+      () =>
+        starSystemId
+          ? getPlanetsByStarSystem(starSystemId)
+          : Promise.resolve([]),
+      [starSystemId]
+    ) || [];
+
   useEffect(() => {
     // Load data from previous steps
     const primaryStar = localStorage.getItem("primaryStar");
@@ -47,7 +81,6 @@ export function CreatePlanetarySystem() {
         id: "primary-star",
         type: "star",
         name: starData.name || "Star A9",
-        luminosity: "1.0 L☉",
         size: "1.0 M☉",
         position: "0 AU",
         modifiers: [],
@@ -60,7 +93,6 @@ export function CreatePlanetarySystem() {
         id: "primary-world",
         type: "world",
         name: worldData.name || "Primary World",
-        luminosity: "N/A",
         size: worldData.size || "1.0 EM",
         position: "1.0 AU",
         modifiers: [],
@@ -88,7 +120,9 @@ export function CreatePlanetarySystem() {
       const worldContext = JSON.parse(worldContextRaw);
       const habitability = habitabilityRaw ? JSON.parse(habitabilityRaw) : null;
       const inhabitants = inhabitantsRaw ? JSON.parse(inhabitantsRaw) : null;
-      const worldStarport = worldStarportRaw ? JSON.parse(worldStarportRaw) : null;
+      const worldStarport = worldStarportRaw
+        ? JSON.parse(worldStarportRaw)
+        : null;
       const worldCulture = worldCultureRaw ? JSON.parse(worldCultureRaw) : null;
 
       setWorldSummary({
@@ -130,18 +164,26 @@ export function CreatePlanetarySystem() {
       const worldStarportRaw = localStorage.getItem("worldStarport");
       const worldCultureRaw = localStorage.getItem("worldCulture");
       const primaryStarRaw = localStorage.getItem("primaryStar");
+      const companionStarsRaw = localStorage.getItem("companionStars");
 
       if (!mainWorldRaw || !worldContextRaw) {
-        throw new Error("Missing required world data. Please complete all wizard steps.");
+        throw new Error(
+          "Missing required world data. Please complete all wizard steps."
+        );
       }
 
       const mainWorld = JSON.parse(mainWorldRaw);
       const worldContext = JSON.parse(worldContextRaw);
       const habitability = habitabilityRaw ? JSON.parse(habitabilityRaw) : null;
       const inhabitants = inhabitantsRaw ? JSON.parse(inhabitantsRaw) : null;
-      const worldStarport = worldStarportRaw ? JSON.parse(worldStarportRaw) : null;
+      const worldStarport = worldStarportRaw
+        ? JSON.parse(worldStarportRaw)
+        : null;
       const worldCulture = worldCultureRaw ? JSON.parse(worldCultureRaw) : null;
       const primaryStar = primaryStarRaw ? JSON.parse(primaryStarRaw) : null;
+      const companionStarsData = companionStarsRaw
+        ? JSON.parse(companionStarsRaw)
+        : null;
 
       // Calculate habitability score if data exists
       let habitabilityScore: number | undefined;
@@ -149,12 +191,78 @@ export function CreatePlanetarySystem() {
         habitabilityScore = calculateHabitabilityScore(habitability);
       }
 
+      // Get or generate star system ID
+      let starSystemId =
+        worldContext?.starSystemId || primaryStar?.starSystemId;
+      if (!starSystemId) {
+        console.warn("⚠️ No starSystemId found, generating new one");
+        starSystemId = generateSystemId();
+      }
+
+      // Build primary star data
+      const primaryStarData: StarData = {
+        id: primaryStar?.id || generateStarId(),
+        name: primaryStar?.name || "Primary Star",
+        stellarClass: (primaryStar?.stellarClass || "G") as StellarClass,
+        stellarGrade: (primaryStar?.stellarGrade ?? 5) as StellarGrade,
+        generationMethod:
+          primaryStar?.generationMethod || GenerationMethod.CUSTOM,
+        diceRolls: primaryStar?.diceRolls,
+        createdAt: primaryStar?.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        createdBy: "user",
+      };
+
+      // Build companion stars from localStorage data
+      const companionStars: StarData[] = [];
+      if (
+        companionStarsData?.companions &&
+        Array.isArray(companionStarsData.companions)
+      ) {
+        for (const comp of companionStarsData.companions) {
+          if (comp.class) {
+            // Only include configured companions
+            companionStars.push({
+              id: typeof comp.id === "string" ? comp.id : generateStarId(),
+              name: comp.name || `Companion ${companionStars.length + 1}`,
+              stellarClass: comp.class as StellarClass,
+              stellarGrade: (comp.grade ?? 5) as StellarGrade,
+              generationMethod:
+                comp.generationMethod || GenerationMethod.CUSTOM,
+              diceRolls: comp.diceRolls,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              createdBy: "user",
+            });
+          }
+        }
+      }
+
+      // Create and save the complete star system
+      const starSystem: StarSystem = {
+        id: starSystemId,
+        name: primaryStarData.name
+          ? `${primaryStarData.name} System`
+          : `${mainWorld.name} System`,
+        primaryStar: primaryStarData,
+        companionStars: companionStars,
+        createdAt: primaryStar?.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        createdBy: "user",
+      };
+
+      // Save the star system to database
+      await saveStarSystem(starSystem);
+      console.log(
+        `💾 Saved star system: ${starSystem.name} (${starSystemId}) with ${companionStars.length} companion(s)`
+      );
+
       // Assemble complete WorldData object
       const worldData: WorldData = {
         // Identity
         id: mainWorld.worldId || `world-${Date.now()}`,
         name: mainWorld.name,
-        starSystemId: primaryStar?.starSystemId || `system-${Date.now()}`,
+        starSystemId: starSystemId,
 
         // Basic properties
         type: mainWorld.type,
@@ -165,17 +273,22 @@ export function CreatePlanetarySystem() {
 
         // Habitability properties
         atmosphericPressure: habitability?.atmosphericPressure,
-        temperature: habitability?.temperature !== undefined
-          ? getTemperatureLabel(habitability.temperature)
-          : undefined,
+        temperature:
+          habitability?.temperature !== undefined
+            ? getTemperatureLabel(habitability.temperature)
+            : undefined,
         hazardType: habitability?.hazardType,
         hazardIntensity: habitability?.hazardIntensity,
         biochemicalResources: habitability?.biochemicalResources,
         habitabilityScore,
 
         // Inhabitants properties
-        population: inhabitants?.population ? parseInt(inhabitants.population) : undefined,
-        wealth: inhabitants?.wealth ? getWealthValue(inhabitants.wealth) : undefined,
+        population: inhabitants?.population
+          ? parseInt(inhabitants.population)
+          : undefined,
+        wealth: inhabitants?.wealth
+          ? getWealthValue(inhabitants.wealth)
+          : undefined,
         powerStructure: inhabitants?.powerStructure,
         governance: inhabitants?.development, // Using development as governance
         sourceOfPower: inhabitants?.sourceOfPower,
@@ -219,15 +332,17 @@ export function CreatePlanetarySystem() {
         localStorage.removeItem("worldStarport");
         localStorage.removeItem("worldCulture");
         localStorage.removeItem("position");
-        // Keep primaryStar and companionStar for potential reuse
+        localStorage.removeItem("primaryStar");
+        localStorage.removeItem("companionStars");
 
         // Navigate to my-worlds
         navigate("/my-worlds");
       }, 1500);
-
     } catch (error) {
       console.error("❌ Failed to save world:", error);
-      setSaveError(error instanceof Error ? error.message : "Failed to save world");
+      setSaveError(
+        error instanceof Error ? error.message : "Failed to save world"
+      );
       setIsSaving(false);
     }
   };
@@ -244,7 +359,9 @@ export function CreatePlanetarySystem() {
       { value: "thin", habitability: -1 },
       { value: "average", habitability: 0 },
     ];
-    const pressure = pressures.find((p) => p.value === data.atmosphericPressure);
+    const pressure = pressures.find(
+      (p) => p.value === data.atmosphericPressure
+    );
     if (pressure) total += pressure.habitability;
 
     // Temperature
@@ -283,7 +400,9 @@ export function CreatePlanetarySystem() {
       { value: "abundant", habitability: 0 },
       { value: "inexhaustible", habitability: 5 },
     ];
-    const resource = resources.find((r) => r.value === data.biochemicalResources);
+    const resource = resources.find(
+      (r) => r.value === data.biochemicalResources
+    );
     if (resource) total += resource.habitability;
 
     return parseFloat(total.toFixed(1));
@@ -335,10 +454,10 @@ export function CreatePlanetarySystem() {
           </div>
 
           <div className="grid grid-cols-2 gap-4 text-white">
-            {body.luminosity && (
+            {body.type === "star" && (
               <div>
                 <p className="text-sm text-white/60 mb-1">Luminosity</p>
-                <p className="font-semibold">{body.luminosity}</p>
+                <p className="font-semibold">1.0 L☉</p>
               </div>
             )}
             {body.size && (
@@ -417,7 +536,11 @@ export function CreatePlanetarySystem() {
 
         {/* World Summary */}
         {worldSummary && (
-          <Collapsible open={summaryOpen} onOpenChange={setSummaryOpen} className="mt-8">
+          <Collapsible
+            open={summaryOpen}
+            onOpenChange={setSummaryOpen}
+            className="mt-8"
+          >
             <div className="flex items-center justify-between py-4 border-b">
               <h2 className="text-2xl font-bold">World Summary</h2>
               <CollapsibleTrigger asChild>
@@ -441,30 +564,113 @@ export function CreatePlanetarySystem() {
                   <CardContent className="grid grid-cols-2 gap-4">
                     <div>
                       <p className="text-sm text-muted-foreground">Name</p>
-                      <p className="font-semibold">{worldSummary.mainWorld.name}</p>
+                      <p className="font-semibold">
+                        {worldSummary.mainWorld.name}
+                      </p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Type</p>
-                      <p className="font-semibold capitalize">{worldSummary.mainWorld.type}</p>
+                      <p className="font-semibold capitalize">
+                        {worldSummary.mainWorld.type}
+                      </p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Size</p>
-                      <p className="font-semibold">{worldSummary.mainWorld.size}</p>
+                      <p className="font-semibold">
+                        {worldSummary.mainWorld.size}
+                      </p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Mass</p>
-                      <p className="font-semibold">{worldSummary.mainWorld.mass} EM</p>
+                      <p className="font-semibold">
+                        {worldSummary.mainWorld.mass} EM
+                      </p>
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Gravity</p>
-                      <p className="font-semibold">{worldSummary.mainWorld.gravity} G</p>
+                      <p className="font-semibold">
+                        {worldSummary.mainWorld.gravity} G
+                      </p>
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Tech Level</p>
-                      <p className="font-semibold">{worldSummary.worldContext.techLevel}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Tech Level
+                      </p>
+                      <p className="font-semibold">
+                        {worldSummary.worldContext.techLevel}
+                      </p>
                     </div>
                   </CardContent>
                 </Card>
+
+                {/* Moons */}
+                {moons.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Moons ({moons.length})</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {moons.map((moon, idx) => (
+                        <div
+                          key={moon.id || idx}
+                          className="p-3 rounded-lg bg-muted"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="flex items-center gap-2 mb-1">
+                                <p className="font-semibold">{moon.name}</p>
+                                <Badge variant="outline">
+                                  {getMoonTypeLabel(moon.moonType)}
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                {moon.size.toFixed(2)} LM •{" "}
+                                {moon.gravity.toFixed(3)} G
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Secondary Planets */}
+                {planets.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>
+                        Secondary Planets ({planets.length})
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {planets.map((planet) => (
+                        <div
+                          key={planet.id}
+                          className="p-3 rounded-lg bg-muted"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="flex items-center gap-2 mb-1">
+                                <p className="font-semibold">{planet.name}</p>
+                                <Badge variant="outline">
+                                  {getPlanetTypeLabel(planet.planetType)}
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-muted-foreground">
+                                Orbit {planet.orbitPosition}
+                                {planet.size &&
+                                  ` • ${planet.size.toFixed(2)} JM`}
+                                {planet.density &&
+                                  ` • ${planet.density} density`}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                )}
 
                 {/* Habitability */}
                 {worldSummary.habitability && (
@@ -474,33 +680,49 @@ export function CreatePlanetarySystem() {
                     </CardHeader>
                     <CardContent className="grid grid-cols-2 gap-4">
                       <div>
-                        <p className="text-sm text-muted-foreground">Atmospheric Pressure</p>
+                        <p className="text-sm text-muted-foreground">
+                          Atmospheric Pressure
+                        </p>
                         <p className="font-semibold capitalize">
-                          {worldSummary.habitability.atmosphericPressure || "Not set"}
+                          {worldSummary.habitability.atmosphericPressure ||
+                            "Not set"}
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Temperature</p>
+                        <p className="text-sm text-muted-foreground">
+                          Temperature
+                        </p>
                         <p className="font-semibold">
-                          {getTemperatureLabel(worldSummary.habitability.temperature || 50)}
+                          {getTemperatureLabel(
+                            worldSummary.habitability.temperature || 50
+                          )}
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Hazard Type</p>
+                        <p className="text-sm text-muted-foreground">
+                          Hazard Type
+                        </p>
                         <p className="font-semibold capitalize">
                           {worldSummary.habitability.hazardType || "None"}
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Biochemical Resources</p>
+                        <p className="text-sm text-muted-foreground">
+                          Biochemical Resources
+                        </p>
                         <p className="font-semibold capitalize">
-                          {worldSummary.habitability.biochemicalResources || "Not set"}
+                          {worldSummary.habitability.biochemicalResources ||
+                            "Not set"}
                         </p>
                       </div>
                       <div className="col-span-2">
-                        <p className="text-sm text-muted-foreground">Habitability Score</p>
+                        <p className="text-sm text-muted-foreground">
+                          Habitability Score
+                        </p>
                         <p className="font-semibold text-lg">
-                          {calculateHabitabilityScore(worldSummary.habitability).toFixed(1)}
+                          {calculateHabitabilityScore(
+                            worldSummary.habitability
+                          ).toFixed(1)}
                         </p>
                       </div>
                     </CardContent>
@@ -515,29 +737,50 @@ export function CreatePlanetarySystem() {
                     </CardHeader>
                     <CardContent className="grid grid-cols-2 gap-4">
                       <div>
-                        <p className="text-sm text-muted-foreground">Population</p>
-                        <p className="font-semibold">{worldSummary.inhabitants.population || "Unknown"}</p>
+                        <p className="text-sm text-muted-foreground">
+                          Population
+                        </p>
+                        <p className="font-semibold">
+                          {worldSummary.inhabitants.population || "Unknown"}
+                        </p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Wealth</p>
-                        <p className="font-semibold capitalize">{worldSummary.inhabitants.wealth || "Not set"}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Power Structure</p>
                         <p className="font-semibold capitalize">
-                          {worldSummary.inhabitants.powerStructure?.replace("-", " ") || "Not set"}
+                          {worldSummary.inhabitants.wealth || "Not set"}
                         </p>
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Development</p>
+                        <p className="text-sm text-muted-foreground">
+                          Power Structure
+                        </p>
                         <p className="font-semibold capitalize">
-                          {worldSummary.inhabitants.development?.replace("-", " ") || "Not set"}
+                          {worldSummary.inhabitants.powerStructure?.replace(
+                            "-",
+                            " "
+                          ) || "Not set"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">
+                          Development
+                        </p>
+                        <p className="font-semibold capitalize">
+                          {worldSummary.inhabitants.development?.replace(
+                            "-",
+                            " "
+                          ) || "Not set"}
                         </p>
                       </div>
                       <div className="col-span-2">
-                        <p className="text-sm text-muted-foreground">Source of Power</p>
+                        <p className="text-sm text-muted-foreground">
+                          Source of Power
+                        </p>
                         <p className="font-semibold capitalize">
-                          {worldSummary.inhabitants.sourceOfPower?.replace("-", " ") || "Not set"}
+                          {worldSummary.inhabitants.sourceOfPower?.replace(
+                            "-",
+                            " "
+                          ) || "Not set"}
                         </p>
                       </div>
                     </CardContent>
@@ -554,37 +797,57 @@ export function CreatePlanetarySystem() {
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <p className="text-sm text-muted-foreground">Class</p>
-                          <p className="font-semibold text-2xl">{worldSummary.starport.starportClass}</p>
+                          <p className="font-semibold text-2xl">
+                            {worldSummary.starport.starportClass}
+                          </p>
                         </div>
                         <div>
-                          <p className="text-sm text-muted-foreground">Port Value Score</p>
-                          <p className="font-semibold text-lg">{worldSummary.starport.portValueScore}</p>
+                          <p className="text-sm text-muted-foreground">
+                            Port Value Score
+                          </p>
+                          <p className="font-semibold text-lg">
+                            {worldSummary.starport.portValueScore}
+                          </p>
                         </div>
                       </div>
-                      {worldSummary.starport.capabilities && worldSummary.starport.capabilities.length > 0 && (
-                        <div>
-                          <p className="text-sm text-muted-foreground mb-2">Capabilities</p>
-                          <div className="flex flex-wrap gap-2">
-                            {worldSummary.starport.capabilities.map((cap: string, idx: number) => (
-                              <Badge key={idx} variant="secondary">{cap}</Badge>
-                            ))}
+                      {worldSummary.starport.capabilities &&
+                        worldSummary.starport.capabilities.length > 0 && (
+                          <div>
+                            <p className="text-sm text-muted-foreground mb-2">
+                              Capabilities
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              {worldSummary.starport.capabilities.map(
+                                (cap: string, idx: number) => (
+                                  <Badge key={idx} variant="secondary">
+                                    {cap}
+                                  </Badge>
+                                )
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      )}
-                      {worldSummary.starport.bases && worldSummary.starport.bases.length > 0 && (
-                        <div>
-                          <p className="text-sm text-muted-foreground mb-2">Bases Present</p>
-                          <div className="flex flex-wrap gap-2">
-                            {worldSummary.starport.bases
-                              .filter((base: any) => base.present)
-                              .map((base: any, idx: number) => (
-                                <Badge key={idx} variant="outline" className="capitalize">
-                                  {base.type}
-                                </Badge>
-                              ))}
+                        )}
+                      {worldSummary.starport.bases &&
+                        worldSummary.starport.bases.length > 0 && (
+                          <div>
+                            <p className="text-sm text-muted-foreground mb-2">
+                              Bases Present
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              {worldSummary.starport.bases
+                                .filter((base: any) => base.present)
+                                .map((base: any, idx: number) => (
+                                  <Badge
+                                    key={idx}
+                                    variant="outline"
+                                    className="capitalize"
+                                  >
+                                    {base.type}
+                                  </Badge>
+                                ))}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
                     </CardContent>
                   </Card>
                 )}
@@ -596,17 +859,21 @@ export function CreatePlanetarySystem() {
                       <CardTitle>Cultural Traits</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3">
-                      {worldSummary.culture.traits.map((trait: any, idx: number) => (
-                        <div key={idx} className="p-3 rounded-lg bg-muted">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Badge variant="secondary" className="capitalize">
-                              {trait.category}
-                            </Badge>
-                            <p className="font-semibold">{trait.trait}</p>
+                      {worldSummary.culture.traits.map(
+                        (trait: any, idx: number) => (
+                          <div key={idx} className="p-3 rounded-lg bg-muted">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Badge variant="secondary" className="capitalize">
+                                {trait.category}
+                              </Badge>
+                              <p className="font-semibold">{trait.trait}</p>
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              {trait.description}
+                            </p>
                           </div>
-                          <p className="text-sm text-muted-foreground">{trait.description}</p>
-                        </div>
-                      ))}
+                        )
+                      )}
                     </CardContent>
                   </Card>
                 )}
@@ -640,7 +907,11 @@ export function CreatePlanetarySystem() {
             onClick={handleCompleteWorld}
             disabled={isSaving || saveSuccess}
           >
-            {isSaving ? "Saving World..." : saveSuccess ? "Saved!" : "Complete & Save World"}
+            {isSaving
+              ? "Saving World..."
+              : saveSuccess
+              ? "Saved!"
+              : "Complete & Save World"}
           </Button>
         </div>
       </div>

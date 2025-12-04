@@ -11,6 +11,9 @@ import Dexie, { type EntityTable } from 'dexie';
 import type { StellarProperty } from '@/models/stellar/data/constants';
 import type { StarData, StarSystem } from '@/models/stellar/types/interface';
 import type { WorldData } from '@/models/world';
+import type { MoonData } from '@/models/world/moon';
+import type { PlanetData } from '@/models/world/planet';
+import type { StarportData } from '@/models/world/starport';
 
 // =====================
 // Database Schema
@@ -22,6 +25,8 @@ import type { WorldData } from '@/models/world';
  * Version 1: Stellar reference data for Primary Star lookups
  * Version 2: Added starSystems table for persistent user-created star systems
  * Version 3: Added worlds table for planetary data
+ * Version 4: Added moons and planets tables for complete system modeling
+ * Version 5: Added starports table for starport facilities data
  */
 export class MnemeDB extends Dexie {
   // Reference data tables (read-only, seeded once on first load)
@@ -31,6 +36,9 @@ export class MnemeDB extends Dexie {
   stars!: EntityTable<StarData, 'id'>;
   starSystems!: EntityTable<StarSystem, 'id'>;
   worlds!: EntityTable<WorldData, 'id'>;
+  moons!: EntityTable<MoonData, 'id'>;
+  planets!: EntityTable<PlanetData, 'id'>;
+  starports!: EntityTable<StarportData, 'id'>;
 
   constructor() {
     super('MnemeDB');
@@ -70,6 +78,55 @@ export class MnemeDB extends Dexie {
 
       // User worlds - planets/habitats linked to star systems
       worlds: 'id, name, starSystemId, createdAt',
+    });
+
+    // Database schema v4 - Add moons and planets tables
+    this.version(4).stores({
+      // Reference data (unchanged)
+      stellarProperties: 'id, [stellarClass+stellarGrade]',
+
+      // User stars (unchanged)
+      stars: 'id, name, stellarClass, stellarGrade, createdAt',
+
+      // User star systems (unchanged)
+      starSystems: 'id, name, createdAt',
+
+      // User worlds (unchanged)
+      worlds: 'id, name, starSystemId, createdAt',
+
+      // User moons - natural satellites linked to specific worlds
+      // Indexed by worldId for efficient world-specific queries
+      // Indexed by starSystemId for system-wide queries
+      moons: 'id, name, worldId, starSystemId, createdAt',
+
+      // User planets - secondary planets (gas giants, ice giants, belts)
+      // Indexed by starSystemId and orbitPosition for orbital organization
+      planets: 'id, name, starSystemId, orbitPosition, createdAt',
+    });
+
+    // Database schema v5 - Add starports table
+    this.version(5).stores({
+      // Reference data (unchanged)
+      stellarProperties: 'id, [stellarClass+stellarGrade]',
+
+      // User stars (unchanged)
+      stars: 'id, name, stellarClass, stellarGrade, createdAt',
+
+      // User star systems (unchanged)
+      starSystems: 'id, name, createdAt',
+
+      // User worlds (unchanged)
+      worlds: 'id, name, starSystemId, createdAt',
+
+      // User moons (unchanged)
+      moons: 'id, name, worldId, starSystemId, createdAt',
+
+      // User planets (unchanged)
+      planets: 'id, name, starSystemId, orbitPosition, createdAt',
+
+      // User starports - port facilities linked to specific worlds
+      // Indexed by worldId for efficient world-specific queries
+      starports: 'id, worldId, createdAt',
     });
   }
 }

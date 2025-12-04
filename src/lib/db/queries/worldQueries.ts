@@ -92,7 +92,8 @@ export async function getWorldsByStarSystem(
  */
 export async function getAllWorlds(): Promise<WorldData[]> {
   try {
-    const worlds = await db.worlds.orderBy('createdAt').reverse().toArray();
+    // Order by oldest first so the original/main world is picked for each system
+    const worlds = await db.worlds.orderBy('createdAt').toArray();
     return worlds;
   } catch (error) {
     console.error('Error fetching all worlds:', error);

@@ -4,7 +4,6 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -108,6 +107,7 @@ export function CreateInhabitants() {
   const [sourceOfPower, setSourceOfPower] = useState("");
   const [amberZone, setAmberZone] = useState(false);
   const [amberZoneReason, setAmberZoneReason] = useState("");
+  const [isLoaded, setIsLoaded] = useState(false);
 
   const formatPopulation = (value: string) => {
     return parseInt(value).toLocaleString();
@@ -156,14 +156,15 @@ export function CreateInhabitants() {
         console.error("Failed to load saved inhabitants data", e);
       }
     }
+    setIsLoaded(true);
   }, []);
 
-  // Auto-save
+  // Auto-save (only after initial load is complete)
   useEffect(() => {
-    if (isFormComplete) {
+    if (isLoaded && isFormComplete) {
       saveData();
     }
-  }, [saveData, isFormComplete]);
+  }, [saveData, isFormComplete, isLoaded]);
 
   // Handler for Next button
   const handleNext = useCallback(() => {
@@ -455,27 +456,132 @@ export function CreateInhabitants() {
                     <h3 className="text-sm font-semibold mb-2 text-muted-foreground uppercase tracking-wide">
                       Human Development Index
                     </h3>
-                    <div className="space-y-1">
-                      <Skeleton className="h-3 w-full" />
-                      <Skeleton className="h-3 w-3/4" />
+                    <div className="text-sm space-y-1">
+                      {DEVELOPMENT_OPTIONS.find(
+                        (d) => d.value === development
+                      ) && (
+                        <>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">
+                              Development Level:
+                            </span>
+                            <span className="font-medium">
+                              {
+                                DEVELOPMENT_OPTIONS.find(
+                                  (d) => d.value === development
+                                )?.label
+                              }
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">
+                              HDI Range:
+                            </span>
+                            <span className="font-medium">
+                              {
+                                DEVELOPMENT_OPTIONS.find(
+                                  (d) => d.value === development
+                                )?.hdi
+                              }
+                            </span>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
 
-                  <div>
+                  <div className="border-t pt-4">
                     <h3 className="text-sm font-semibold mb-2 text-muted-foreground uppercase tracking-wide">
-                      Ave. SOC
+                      Social Standing (SOC) Modifiers
                     </h3>
-                    <div className="space-y-1">
-                      <Skeleton className="h-3 w-full" />
-                      <Skeleton className="h-3 w-2/3" />
+                    <div className="text-sm space-y-1">
+                      {WEALTH_OPTIONS.find((w) => w.value === wealth) && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">
+                            Wealth (
+                            {
+                              WEALTH_OPTIONS.find((w) => w.value === wealth)
+                                ?.label
+                            }
+                            ):
+                          </span>
+                          <span className="font-medium">
+                            {WEALTH_OPTIONS.find((w) => w.value === wealth)
+                              ?.soc !== 0
+                              ? `+${
+                                  WEALTH_OPTIONS.find((w) => w.value === wealth)
+                                    ?.soc
+                                }`
+                              : "±0"}
+                          </span>
+                        </div>
+                      )}
+                      {DEVELOPMENT_OPTIONS.find(
+                        (d) => d.value === development
+                      ) && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">
+                            Development (
+                            {
+                              DEVELOPMENT_OPTIONS.find(
+                                (d) => d.value === development
+                              )?.label
+                            }
+                            ):
+                          </span>
+                          <span className="font-medium">
+                            Base SOC{" "}
+                            {
+                              DEVELOPMENT_OPTIONS.find(
+                                (d) => d.value === development
+                              )?.soc
+                            }
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  <div>
+                  <div className="border-t pt-4">
                     <h3 className="text-sm font-semibold mb-2 text-muted-foreground uppercase tracking-wide">
-                      Habitability
+                      Governance Summary
                     </h3>
-                    <Skeleton className="h-3 w-1/2" />
+                    <div className="text-sm space-y-1">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">
+                          Power Structure:
+                        </span>
+                        <span className="font-medium">
+                          {
+                            POWER_STRUCTURE.find(
+                              (p) => p.value === powerStructure
+                            )?.label
+                          }
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">
+                          Source of Power:
+                        </span>
+                        <span className="font-medium">
+                          {
+                            SOURCE_OF_POWER.find(
+                              (s) => s.value === sourceOfPower
+                            )?.label
+                          }
+                        </span>
+                      </div>
+                      {amberZone && (
+                        <div className="flex justify-between text-amber-600 dark:text-amber-400">
+                          <span>⚠️ Amber Zone:</span>
+                          <span className="font-medium">
+                            {AMBER_ZONE_REASONS.find(
+                              (r) => r.value === amberZoneReason
+                            )?.label || "Active"}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </Card>
