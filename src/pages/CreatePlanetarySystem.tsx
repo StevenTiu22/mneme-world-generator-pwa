@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/collapsible";
 import { saveWorld } from "@/lib/db/queries/worldQueries";
 import { getMoonsByWorld } from "@/lib/db/queries/moonQueries";
-import { getPlanetsByStarSystem } from "@/lib/db/queries/planetQueries";
+import { getPlanetsByStarSystem, getDisksByStarSystem } from "@/lib/db/queries/planetQueries";
 import {
   saveStarSystem,
   generateSystemId,
@@ -24,7 +24,7 @@ import type { StarSystem, StarData } from "@/models/stellar/types/interface";
 import type { StellarClass, StellarGrade } from "@/models/stellar/types/enums";
 import { GenerationMethod } from "@/models/common/types";
 import { getMoonTypeLabel } from "@/models/world/moon";
-import { getPlanetTypeLabel } from "@/models/world/planet";
+import { getPlanetTypeLabel, getDiskTypeLabel, getDiskZoneLabel } from "@/models/world/planet";
 
 interface CelestialBody {
   id: string;
@@ -64,6 +64,15 @@ export function CreatePlanetarySystem() {
       () =>
         starSystemId
           ? getPlanetsByStarSystem(starSystemId)
+          : Promise.resolve([]),
+      [starSystemId]
+    ) || [];
+
+  const disks =
+    useLiveQuery(
+      () =>
+        starSystemId
+          ? getDisksByStarSystem(starSystemId)
           : Promise.resolve([]),
       [starSystemId]
     ) || [];
@@ -139,14 +148,7 @@ export function CreatePlanetarySystem() {
   }, []);
 
   const handleAddDisk = () => {
-    const newDisk: CelestialBody = {
-      id: `disk-${Date.now()}`,
-      type: "disk",
-      name: `Disk ${bodies.filter((b) => b.type === "disk").length + 1}`,
-      position: "3.0 AU",
-      modifiers: [],
-    };
-    setBodies([...bodies, newDisk]);
+    navigate("/create-new/circumstellar-disks");
   };
 
   // Gather all data from localStorage and save to database
@@ -505,7 +507,14 @@ export function CreatePlanetarySystem() {
         {/* Disk Section */}
         <Collapsible open={diskOpen} onOpenChange={setDiskOpen}>
           <div className="flex items-center justify-between py-4">
-            <h2 className="text-xl font-semibold">Disk</h2>
+            <h2 className="text-xl font-semibold">
+              Circumstellar Disks
+              {disks.length > 0 && (
+                <Badge variant="secondary" className="ml-2">
+                  {disks.length}
+                </Badge>
+              )}
+            </h2>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={handleAddDisk}>
                 <Plus className="h-4 w-4 mr-2" />
@@ -525,11 +534,74 @@ export function CreatePlanetarySystem() {
 
           <CollapsibleContent>
             <div className="space-y-4">
-              {bodies
-                .filter((b) => b.type === "disk")
-                .map((disk) => (
-                  <CelestialCard key={disk.id} body={disk} />
-                ))}
+              {disks.length === 0 ? (
+                <Alert>
+                  <AlertDescription>
+                    No circumstellar disks added yet. Click "Add Disk" to create one.
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                disks.map((disk) => (
+                  <Card key={disk.id}>
+                    <CardHeader>
+                      <CardTitle className="flex items-center justify-between">
+                        <span>{disk.name}</span>
+                        <Badge>{getDiskTypeLabel(disk.diskType!)}</Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">
+                            Zone
+                          </p>
+                          <p className="text-sm">
+                            {getDiskZoneLabel(disk.diskZone!)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">
+                            Mass
+                          </p>
+                          <p className="text-sm">
+                            {disk.diskMass} {disk.diskMassUnit}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">
+                            Inner Radius
+                          </p>
+                          <p className="text-sm">{disk.diskInnerRadius} AU</p>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-muted-foreground">
+                            Outer Radius
+                          </p>
+                          <p className="text-sm">{disk.diskOuterRadius} AU</p>
+                        </div>
+                        <div className="col-span-2">
+                          <p className="text-sm font-medium text-muted-foreground">
+                            Width
+                          </p>
+                          <p className="text-sm">
+                            {(disk.diskOuterRadius! - disk.diskInnerRadius!).toFixed(
+                              2
+                            )}{" "}
+                            AU ({disk.diskInnerRadius} → {disk.diskOuterRadius} AU)
+                          </p>
+                        </div>
+                      </div>
+                      <div className="mt-4">
+                        <Badge variant="outline">
+                          {disk.generationMethod === GenerationMethod.PROCEDURAL
+                            ? "Procedural"
+                            : "Custom"}
+                        </Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              )}
             </div>
           </CollapsibleContent>
         </Collapsible>

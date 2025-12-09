@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Tooltip,
   TooltipContent,
@@ -50,8 +51,15 @@ export function CreateWorldCulture() {
   const [worldName, setWorldName] = useState("Unknown World");
   const [worldId, setWorldId] = useState<string | null>(null);
   const [traits, setTraits] = useState<CultureTrait[]>([]);
-  const [generationMethod, setGenerationMethod] = useState<'procedural' | 'custom'>('procedural');
   const [isInitialized, setIsInitialized] = useState(false);
+
+  // Generation mode state
+  const [generationMode, setGenerationMode] = useState<'procedural' | 'manual'>('procedural');
+
+  // Manual selection values
+  const [manualSocial, setManualSocial] = useState<string>("");
+  const [manualEconomic, setManualEconomic] = useState<string>("");
+  const [manualTech, setManualTech] = useState<string>("");
 
   // Check if culture is complete
   const isCultureComplete = traits.length === 3;
@@ -70,10 +78,55 @@ export function CreateWorldCulture() {
 
     const cultureData = generateCulture({ worldId });
     setTraits(cultureData.traits);
-    setGenerationMethod('procedural');
 
     console.log("🎭 Generated complete culture:", cultureData);
   }, [worldId]);
+
+  // Handle manual culture creation
+  const handleCreateManualCulture = useCallback(() => {
+    if (!manualSocial || !manualEconomic || !manualTech) {
+      console.error("All three traits must be selected for manual culture creation");
+      return;
+    }
+
+    const newTraits: CultureTrait[] = [];
+
+    // Social trait
+    const socialEntry = CULTURE_SOCIAL_VALUES.find(t => t.trait === manualSocial);
+    if (socialEntry) {
+      newTraits.push({
+        category: CultureCategory.SOCIAL,
+        trait: socialEntry.trait,
+        description: socialEntry.description,
+        roll: socialEntry.d66,
+      });
+    }
+
+    // Economic trait
+    const economicEntry = CULTURE_ECONOMIC_FOCUS.find(t => t.trait === manualEconomic);
+    if (economicEntry) {
+      newTraits.push({
+        category: CultureCategory.ECONOMIC,
+        trait: economicEntry.trait,
+        description: economicEntry.description,
+        roll: economicEntry.d66,
+      });
+    }
+
+    // Tech trait
+    const techEntry = CULTURE_TECH_ATTITUDE.find(t => t.trait === manualTech);
+    if (techEntry) {
+      newTraits.push({
+        category: CultureCategory.TECHNOLOGICAL,
+        trait: techEntry.trait,
+        description: techEntry.description,
+        roll: techEntry.d66,
+      });
+    }
+
+    setTraits(newTraits);
+    console.log("✍️ Created manual culture:", newTraits);
+  }, [manualSocial, manualEconomic, manualTech]);
 
   // Handle re-roll of specific trait
   const handleRerollTrait = useCallback((category: CultureCategory) => {
@@ -89,65 +142,18 @@ export function CreateWorldCulture() {
       });
     });
 
-    // If user manually re-rolls, it becomes custom
-    if (generationMethod === 'procedural') {
-      setGenerationMethod('custom');
-    }
-
     console.log(`🔄 Re-rolled ${category} trait:`, trait);
-  }, [generationMethod]);
-
-  // Handle manual trait selection
-  const handleSelectTrait = useCallback((category: CultureCategory, traitValue: string) => {
-    // Find the trait entry from the appropriate table
-    let table;
-    switch (category) {
-      case CultureCategory.SOCIAL:
-        table = CULTURE_SOCIAL_VALUES;
-        break;
-      case CultureCategory.ECONOMIC:
-        table = CULTURE_ECONOMIC_FOCUS;
-        break;
-      case CultureCategory.TECHNOLOGICAL:
-        table = CULTURE_TECH_ATTITUDE;
-        break;
-    }
-
-    const entry = table.find(t => t.trait === traitValue);
-    if (!entry) return;
-
-    const newTrait: CultureTrait = {
-      category,
-      trait: entry.trait,
-      description: entry.description,
-      roll: entry.d66,
-    };
-
-    setTraits(prevTraits => {
-      // Replace the trait for this category
-      const newTraits = prevTraits.filter(t => t.category !== category);
-      return [...newTraits, newTrait].sort((a, b) => {
-        // Sort by category order: social, economic, tech
-        const order = [CultureCategory.SOCIAL, CultureCategory.ECONOMIC, CultureCategory.TECHNOLOGICAL];
-        return order.indexOf(a.category) - order.indexOf(b.category);
-      });
-    });
-
-    // Manual selection means custom
-    setGenerationMethod('custom');
-
-    console.log(`📝 Manually selected ${category} trait:`, newTrait);
   }, []);
 
   // Save data to localStorage
   const saveData = useCallback(() => {
     const data: CulturePageData = {
       traits,
-      generationMethod,
+      generationMethod: generationMode === 'procedural' ? 'procedural' : 'custom',
     };
     localStorage.setItem("worldCulture", JSON.stringify(data));
     console.log("💾 Saved culture data to localStorage");
-  }, [traits, generationMethod]);
+  }, [traits, generationMode]);
 
   // Load world data from previous step
   useEffect(() => {
@@ -165,7 +171,6 @@ export function CreateWorldCulture() {
         if (savedCulture) {
           const cultureData: CulturePageData = JSON.parse(savedCulture);
           setTraits(cultureData.traits);
-          setGenerationMethod(cultureData.generationMethod);
           console.log("✅ Loaded existing culture data from localStorage");
         }
       } catch (error) {
@@ -220,43 +225,47 @@ export function CreateWorldCulture() {
           bg: "bg-blue-50 dark:bg-blue-950/30",
           border: "border-blue-200 dark:border-blue-900",
           badge: "border-blue-600 text-blue-600",
-          button: "text-blue-600 hover:text-blue-700 hover:bg-blue-100",
+          text: "text-blue-600 dark:text-blue-400",
+          button: "text-blue-600 hover:text-blue-700 hover:bg-blue-100 dark:hover:bg-blue-950",
         };
       case CultureCategory.ECONOMIC:
         return {
           bg: "bg-green-50 dark:bg-green-950/30",
           border: "border-green-200 dark:border-green-900",
           badge: "border-green-600 text-green-600",
-          button: "text-green-600 hover:text-green-700 hover:bg-green-100",
+          text: "text-green-600 dark:text-green-400",
+          button: "text-green-600 hover:text-green-700 hover:bg-green-100 dark:hover:bg-green-950",
         };
       case CultureCategory.TECHNOLOGICAL:
         return {
           bg: "bg-purple-50 dark:bg-purple-950/30",
           border: "border-purple-200 dark:border-purple-900",
           badge: "border-purple-600 text-purple-600",
-          button: "text-purple-600 hover:text-purple-700 hover:bg-purple-100",
+          text: "text-purple-600 dark:text-purple-400",
+          button: "text-purple-600 hover:text-purple-700 hover:bg-purple-100 dark:hover:bg-purple-950",
         };
       default:
         return {
           bg: "bg-gray-50 dark:bg-gray-950/30",
           border: "border-gray-200 dark:border-gray-900",
           badge: "border-gray-600 text-gray-600",
-          button: "text-gray-600 hover:text-gray-700 hover:bg-gray-100",
+          text: "text-gray-600 dark:text-gray-400",
+          button: "text-gray-600 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-950",
         };
     }
   };
 
-  // Get category label
-  const getCategoryLabel = (category: CultureCategory): string => {
+  // Get category label and icon
+  const getCategoryInfo = (category: CultureCategory): { label: string; icon: string } => {
     switch (category) {
       case CultureCategory.SOCIAL:
-        return "Social Values";
+        return { label: "Social Values", icon: "👥" };
       case CultureCategory.ECONOMIC:
-        return "Economic Focus";
+        return { label: "Economic Focus", icon: "💼" };
       case CultureCategory.TECHNOLOGICAL:
-        return "Technological Attitude";
+        return { label: "Technological Attitude", icon: "🔬" };
       default:
-        return category;
+        return { label: category, icon: "📋" };
     }
   };
 
@@ -289,226 +298,182 @@ export function CreateWorldCulture() {
 
         {/* Main Content */}
         <div className="space-y-6">
-          {/* Generation Button */}
-          <Card className="p-6 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border-amber-200 dark:border-amber-900">
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold mb-1 flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-amber-600" />
-                  Procedural Generation
-                </h3>
-                <p className="text-sm text-muted-foreground">
-                  Generate three cultural traits using the d66 system from Mneme rules.
-                </p>
-              </div>
-              <Button
-                onClick={handleGenerateCulture}
-                className="ml-4"
-                size="lg"
-              >
-                <Dices className="h-4 w-4 mr-2" />
-                Generate Culture
-              </Button>
-            </div>
-          </Card>
-
-          {/* Manual Selection */}
+          {/* Generation Mode Selection */}
           <Card className="p-6">
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold mb-1 flex items-center gap-2">
-                <Info className="h-5 w-5 text-primary" />
-                Manual Selection
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                Or choose specific cultural traits from the complete list.
-              </p>
-            </div>
-
-            <div className="space-y-6">
-              {/* Social Values Selector */}
+            <div className="space-y-4">
               <div>
-                <Label htmlFor="social-selector" className="text-base font-semibold mb-2 block">
-                  Social Values
-                </Label>
-                <Select
-                  value={getTraitByCategory(CultureCategory.SOCIAL)?.trait || ""}
-                  onValueChange={(value) => handleSelectTrait(CultureCategory.SOCIAL, value)}
+                <Label className="text-base font-semibold mb-3 block">Generation Mode</Label>
+                <RadioGroup
+                  value={generationMode}
+                  onValueChange={(value) => setGenerationMode(value as 'procedural' | 'manual')}
+                  className="flex gap-6"
                 >
-                  <SelectTrigger id="social-selector">
-                    <SelectValue placeholder="Select a social value" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CULTURE_SOCIAL_VALUES.map((entry) => (
-                      <SelectItem key={entry.d66} value={entry.trait}>
-                        {entry.trait} - {entry.description}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="procedural" id="procedural" />
+                    <Label htmlFor="procedural" className="cursor-pointer">
+                      Procedural (d66 Tables)
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="manual" id="manual" />
+                    <Label htmlFor="manual" className="cursor-pointer">
+                      Manual Selection
+                    </Label>
+                  </div>
+                </RadioGroup>
               </div>
 
-              {/* Economic Focus Selector */}
-              <div>
-                <Label htmlFor="economic-selector" className="text-base font-semibold mb-2 block">
-                  Economic Focus
-                </Label>
-                <Select
-                  value={getTraitByCategory(CultureCategory.ECONOMIC)?.trait || ""}
-                  onValueChange={(value) => handleSelectTrait(CultureCategory.ECONOMIC, value)}
-                >
-                  <SelectTrigger id="economic-selector">
-                    <SelectValue placeholder="Select an economic focus" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CULTURE_ECONOMIC_FOCUS.map((entry) => (
-                      <SelectItem key={entry.d66} value={entry.trait}>
-                        {entry.trait} - {entry.description}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Procedural Generation */}
+              {generationMode === 'procedural' && (
+                <Card className="p-6 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border-amber-200 dark:border-amber-900">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold mb-1 flex items-center gap-2">
+                        <Sparkles className="h-5 w-5 text-amber-600" />
+                        Procedural Generation
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        Generate three cultural traits using the d66 system from Mneme rules.
+                      </p>
+                    </div>
+                    <Button
+                      onClick={handleGenerateCulture}
+                      className="ml-4"
+                      size="lg"
+                    >
+                      <Dices className="h-4 w-4 mr-2" />
+                      Generate Culture
+                    </Button>
+                  </div>
+                </Card>
+              )}
 
-              {/* Technological Attitude Selector */}
-              <div>
-                <Label htmlFor="tech-selector" className="text-base font-semibold mb-2 block">
-                  Technological Attitude
-                </Label>
-                <Select
-                  value={getTraitByCategory(CultureCategory.TECHNOLOGICAL)?.trait || ""}
-                  onValueChange={(value) => handleSelectTrait(CultureCategory.TECHNOLOGICAL, value)}
-                >
-                  <SelectTrigger id="tech-selector">
-                    <SelectValue placeholder="Select a technological attitude" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CULTURE_TECH_ATTITUDE.map((entry) => (
-                      <SelectItem key={entry.d66} value={entry.trait}>
-                        {entry.trait} - {entry.description}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Manual Selection */}
+              {generationMode === 'manual' && (
+                <Card className="p-6 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 border-purple-200 dark:border-purple-900">
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="text-lg font-semibold mb-1">Manual Selection</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Choose specific cultural traits from the complete list. All three traits must be selected.
+                      </p>
+                    </div>
+
+                    <div className="space-y-4">
+                      {/* Social Values Selector */}
+                      <div>
+                        <Label htmlFor="social-selector" className="mb-2 block">
+                          Social Values
+                        </Label>
+                        <Select
+                          value={manualSocial}
+                          onValueChange={setManualSocial}
+                        >
+                          <SelectTrigger id="social-selector">
+                            <SelectValue placeholder="Select a social value" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {CULTURE_SOCIAL_VALUES.map((entry) => (
+                              <SelectItem key={entry.d66} value={entry.trait}>
+                                {entry.trait} - {entry.description}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Economic Focus Selector */}
+                      <div>
+                        <Label htmlFor="economic-selector" className="mb-2 block">
+                          Economic Focus
+                        </Label>
+                        <Select
+                          value={manualEconomic}
+                          onValueChange={setManualEconomic}
+                        >
+                          <SelectTrigger id="economic-selector">
+                            <SelectValue placeholder="Select an economic focus" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {CULTURE_ECONOMIC_FOCUS.map((entry) => (
+                              <SelectItem key={entry.d66} value={entry.trait}>
+                                {entry.trait} - {entry.description}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Technological Attitude Selector */}
+                      <div>
+                        <Label htmlFor="tech-selector" className="mb-2 block">
+                          Technological Attitude
+                        </Label>
+                        <Select
+                          value={manualTech}
+                          onValueChange={setManualTech}
+                        >
+                          <SelectTrigger id="tech-selector">
+                            <SelectValue placeholder="Select a technological attitude" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {CULTURE_TECH_ATTITUDE.map((entry) => (
+                              <SelectItem key={entry.d66} value={entry.trait}>
+                                {entry.trait} - {entry.description}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <Button
+                      onClick={handleCreateManualCulture}
+                      size="lg"
+                      className="w-full mt-2"
+                      disabled={!manualSocial || !manualEconomic || !manualTech}
+                    >
+                      <Dices className="h-4 w-4 mr-2" />
+                      Create Culture
+                    </Button>
+                  </div>
+                </Card>
+              )}
             </div>
           </Card>
 
-          {/* Cultural Traits */}
+          {/* Cultural Traits Display */}
           {isCultureComplete && (
             <div className="space-y-6">
               <div className="flex items-center gap-2">
                 <Label className="text-lg font-semibold">Cultural Traits</Label>
-                <Badge variant="secondary" className="font-mono">
-                  {generationMethod === 'procedural' ? 'Procedural' : 'Custom'}
-                </Badge>
               </div>
 
-              {/* Social Values */}
-              {getTraitByCategory(CultureCategory.SOCIAL) && (() => {
-                const trait = getTraitByCategory(CultureCategory.SOCIAL)!;
-                const colors = getCategoryColor(CultureCategory.SOCIAL);
-                return (
-                  <Card key={trait.category} className={`p-6 ${colors.bg} ${colors.border}`}>
-                    <CardHeader className="p-0 mb-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <Badge variant="outline" className={colors.badge}>
-                            {getCategoryLabel(trait.category)}
-                          </Badge>
-                          <CardTitle className="text-xl">{trait.trait}</CardTitle>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Badge variant="secondary" className="font-mono">
-                                {trait.roll}
-                              </Badge>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>d66 roll result</p>
-                            </TooltipContent>
-                          </Tooltip>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleRerollTrait(trait.category)}
-                            className={`h-8 w-8 ${colors.button}`}
-                            title="Re-roll this trait"
-                          >
-                            <RefreshCw className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="p-0">
-                      <p className="text-muted-foreground">{trait.description}</p>
-                    </CardContent>
-                  </Card>
-                );
-              })()}
+              {/* Display each trait */}
+              {[CultureCategory.SOCIAL, CultureCategory.ECONOMIC, CultureCategory.TECHNOLOGICAL].map(category => {
+                const trait = getTraitByCategory(category);
+                if (!trait) return null;
 
-              {/* Economic Focus */}
-              {getTraitByCategory(CultureCategory.ECONOMIC) && (() => {
-                const trait = getTraitByCategory(CultureCategory.ECONOMIC)!;
-                const colors = getCategoryColor(CultureCategory.ECONOMIC);
-                return (
-                  <Card key={trait.category} className={`p-6 ${colors.bg} ${colors.border}`}>
-                    <CardHeader className="p-0 mb-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <Badge variant="outline" className={colors.badge}>
-                            {getCategoryLabel(trait.category)}
-                          </Badge>
-                          <CardTitle className="text-xl">{trait.trait}</CardTitle>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Badge variant="secondary" className="font-mono">
-                                {trait.roll}
-                              </Badge>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>d66 roll result</p>
-                            </TooltipContent>
-                          </Tooltip>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleRerollTrait(trait.category)}
-                            className={`h-8 w-8 ${colors.button}`}
-                            title="Re-roll this trait"
-                          >
-                            <RefreshCw className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="p-0">
-                      <p className="text-muted-foreground">{trait.description}</p>
-                    </CardContent>
-                  </Card>
-                );
-              })()}
+                const colors = getCategoryColor(category);
+                const info = getCategoryInfo(category);
 
-              {/* Technological Attitude */}
-              {getTraitByCategory(CultureCategory.TECHNOLOGICAL) && (() => {
-                const trait = getTraitByCategory(CultureCategory.TECHNOLOGICAL)!;
-                const colors = getCategoryColor(CultureCategory.TECHNOLOGICAL);
                 return (
                   <Card key={trait.category} className={`p-6 ${colors.bg} ${colors.border}`}>
                     <CardHeader className="p-0 mb-4">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <Badge variant="outline" className={colors.badge}>
-                            {getCategoryLabel(trait.category)}
-                          </Badge>
-                          <CardTitle className="text-xl">{trait.trait}</CardTitle>
+                        <div className="flex items-center gap-4">
+                          <span className="text-4xl">{info.icon}</span>
+                          <div>
+                            <Badge variant="outline" className={`${colors.badge} mb-2`}>
+                              {info.label}
+                            </Badge>
+                            <CardTitle className="text-2xl">{trait.trait}</CardTitle>
+                          </div>
                         </div>
                         <div className="flex items-center gap-2">
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Badge variant="secondary" className="font-mono">
+                              <Badge variant="secondary" className="font-mono text-lg px-3 py-1">
                                 {trait.roll}
                               </Badge>
                             </TooltipTrigger>
@@ -529,11 +494,11 @@ export function CreateWorldCulture() {
                       </div>
                     </CardHeader>
                     <CardContent className="p-0">
-                      <p className="text-muted-foreground">{trait.description}</p>
+                      <p className="text-muted-foreground text-base">{trait.description}</p>
                     </CardContent>
                   </Card>
                 );
-              })()}
+              })}
             </div>
           )}
 
@@ -547,7 +512,7 @@ export function CreateWorldCulture() {
                   <p className="text-sm text-muted-foreground mb-3">
                     Culture is generated using three d66 rolls (rolling two six-sided dice, reading the first as tens and second as ones):
                   </p>
-                  <ul className="space-y-2 text-sm text-muted-foreground">
+                  <ul className="space-y-1 text-sm text-muted-foreground">
                     <li className="flex items-start gap-2">
                       <span className="text-blue-600 dark:text-blue-400 mt-0.5">•</span>
                       <span><strong>Social Values:</strong> Core values and beliefs about relationships and society</span>

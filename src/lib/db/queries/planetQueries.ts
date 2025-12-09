@@ -7,6 +7,7 @@
 
 import { db } from '../database';
 import type { PlanetData } from '@/models/world/planet';
+import { PlanetType, type DiskZone } from '@/models/world/planet';
 
 // =====================
 // Create & Update
@@ -294,6 +295,7 @@ export async function getPlanetCountByType(
   iceGiant: number;
   asteroidBelt: number;
   planetoidBelt: number;
+  circumstellarDisk: number;
 }> {
   try {
     const planets = starSystemId
@@ -305,6 +307,7 @@ export async function getPlanetCountByType(
       iceGiant: 0,
       asteroidBelt: 0,
       planetoidBelt: 0,
+      circumstellarDisk: 0,
     };
 
     for (const planet of planets) {
@@ -312,6 +315,8 @@ export async function getPlanetCountByType(
       else if (planet.planetType === 'ice_giant') counts.iceGiant++;
       else if (planet.planetType === 'asteroid_belt') counts.asteroidBelt++;
       else if (planet.planetType === 'planetoid_belt') counts.planetoidBelt++;
+      else if (planet.planetType === 'circumstellar_disk')
+        counts.circumstellarDisk++;
     }
 
     return counts;
@@ -347,5 +352,74 @@ export async function getAvailableOrbits(
   } catch (error) {
     console.error('Error getting available orbits:', error);
     throw new Error('Failed to get available orbits');
+  }
+}
+
+// =====================
+// Disk-Specific Operations
+// =====================
+
+/**
+ * Get all circumstellar disks in a star system
+ *
+ * @param starSystemId - Star system ID
+ * @returns Array of circumstellar disks
+ */
+export async function getDisksByStarSystem(
+  starSystemId: string
+): Promise<PlanetData[]> {
+  try {
+    const allPlanets = await getPlanetsByStarSystem(starSystemId);
+    return allPlanets.filter(
+      (planet) => planet.planetType === PlanetType.CIRCUMSTELLAR_DISK
+    );
+  } catch (error) {
+    console.error('Error getting disks by star system:', error);
+    throw new Error(`Failed to get disks for star system: ${starSystemId}`);
+  }
+}
+
+/**
+ * Get all circumstellar disks in a specific zone
+ *
+ * @param starSystemId - Star system ID
+ * @param zone - Disk zone to filter by
+ * @returns Array of circumstellar disks in the specified zone
+ */
+export async function getDisksByZone(
+  starSystemId: string,
+  zone: DiskZone
+): Promise<PlanetData[]> {
+  try {
+    const disks = await getDisksByStarSystem(starSystemId);
+    return disks.filter((disk) => disk.diskZone === zone);
+  } catch (error) {
+    console.error('Error getting disks by zone:', error);
+    throw new Error(
+      `Failed to get disks in zone ${zone} for star system: ${starSystemId}`
+    );
+  }
+}
+
+/**
+ * Get the count of circumstellar disks
+ *
+ * @param starSystemId - Optional star system ID to count disks for specific system
+ * @returns Number of circumstellar disks
+ */
+export async function getDiskCount(starSystemId?: string): Promise<number> {
+  try {
+    if (starSystemId) {
+      const disks = await getDisksByStarSystem(starSystemId);
+      return disks.length;
+    }
+
+    const allPlanets = await db.planets.toArray();
+    return allPlanets.filter(
+      (planet) => planet.planetType === PlanetType.CIRCUMSTELLAR_DISK
+    ).length;
+  } catch (error) {
+    console.error('Error counting disks:', error);
+    throw new Error('Failed to count circumstellar disks');
   }
 }

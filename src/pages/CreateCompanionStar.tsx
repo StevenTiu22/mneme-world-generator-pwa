@@ -10,6 +10,7 @@ import {
   Dices,
   Check,
   Loader2,
+  SkipForward,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -433,6 +434,25 @@ export function CreateCompanionStar() {
     navigate("../main-world");
   }, [navigate, companions]);
 
+  // Handler for Skip button (single-star system)
+  const handleSkip = useCallback(() => {
+    // Get starSystemId from primary star
+    const primaryStarRaw = localStorage.getItem("primaryStar");
+    const primaryStar = primaryStarRaw ? JSON.parse(primaryStarRaw) : null;
+    const starSystemId = primaryStar?.starSystemId;
+
+    // Save empty companion star data to localStorage to indicate single-star system
+    const data = {
+      starSystemId: starSystemId,
+      companions: [],
+    };
+    localStorage.setItem("companionStars", JSON.stringify(data));
+    console.log("⏭️ Skipped companion stars - creating single-star system");
+
+    // Navigate to main world page
+    navigate("../main-world");
+  }, [navigate]);
+
   // Update button handlers
   useEffect(() => {
     if (context) {
@@ -530,6 +550,34 @@ export function CreateCompanionStar() {
           </p>
         </div>
 
+        {/* Single-Star System Skip Card - Prominent when no companions */}
+        {companions.length === 0 && (
+          <Card className="mb-6 border-2 border-primary/20 bg-primary/5">
+            <CardContent className="pt-6">
+              <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                <div className="flex-1 text-center md:text-left">
+                  <h3 className="text-lg font-semibold mb-1 flex items-center justify-center md:justify-start gap-2">
+                    <Info className="h-5 w-5 text-primary" />
+                    Creating a Single-Star System?
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Most star systems have only one star. Skip companion configuration to create a single-star system and continue to world creation.
+                  </p>
+                </div>
+                <Button
+                  size="lg"
+                  variant="default"
+                  onClick={handleSkip}
+                  className="gap-2 min-w-[200px] shadow-lg"
+                >
+                  <SkipForward className="h-5 w-5" />
+                  Skip - Single Star
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Status Alert */}
         {companions.length > 0 && status.configured < status.total && (
           <Alert className="mb-4">
@@ -626,7 +674,7 @@ export function CreateCompanionStar() {
                 ))}
               </div>
 
-              <div className="pr-8">
+              <div className="pr-8 space-y-2">
                 <Button
                   variant="outline"
                   className="w-full"
@@ -636,6 +684,18 @@ export function CreateCompanionStar() {
                   <Plus className="h-4 w-4 mr-2" />
                   Add Companion {!canAddMore && `(Max ${maxCompanions})`}
                 </Button>
+
+                {/* Skip button - visible when there are companions */}
+                {companions.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    className="w-full text-muted-foreground hover:text-foreground"
+                    onClick={handleSkip}
+                  >
+                    <SkipForward className="h-4 w-4 mr-2" />
+                    Skip to Single Star
+                  </Button>
+                )}
               </div>
             </div>
           </div>
