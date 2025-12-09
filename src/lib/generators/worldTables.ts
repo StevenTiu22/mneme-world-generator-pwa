@@ -141,19 +141,24 @@ export interface GravityTableEntry {
  * Gravity table (2D6)
  * Different values for dwarf vs terrestrial worlds
  * Habitats don't use this table (they have artificial gravity)
+ *
+ * Distribution follows 2D6 probability:
+ * - Low rolls (2-4): Low gravity for terrestrials (Mars-like worlds)
+ * - Mid rolls (5-9): Normal gravity for terrestrials (Earth-like, most common)
+ * - High rolls (10-12): High gravity for terrestrials (Super-Earths)
  */
 export const GRAVITY_TABLE: GravityTableEntry[] = [
-  { roll: 2, dwarfGravity: 0.001, terrestrialGravity: 3.0, habitabilityModifier: -2.5, label: '0.001 G / 3 G' },
-  { roll: 3, dwarfGravity: 0.02, terrestrialGravity: 2.0, habitabilityModifier: -2, label: '0.02 G / 2 G' },
-  { roll: 4, dwarfGravity: 0.04, terrestrialGravity: 1.5, habitabilityModifier: -1.5, label: '0.04 G / 1.5 G' },
-  { roll: 5, dwarfGravity: 0.06, terrestrialGravity: 1.3, habitabilityModifier: -1, label: '0.06 G / 1.3 G' },
-  { roll: 6, dwarfGravity: 0.08, terrestrialGravity: 1.2, habitabilityModifier: -0.5, label: '0.08 G / 1.2 G' },
-  { roll: 7, dwarfGravity: 0.10, terrestrialGravity: 0.3, habitabilityModifier: -0.5, label: '0.10 G / 0.3 G' },
-  { roll: 8, dwarfGravity: 0.12, terrestrialGravity: 0.4, habitabilityModifier: -0.5, label: '0.12 G / 0.4 G' },
-  { roll: 9, dwarfGravity: 0.14, terrestrialGravity: 0.5, habitabilityModifier: -0.5, label: '0.14 G / 0.5 G' },
-  { roll: 10, dwarfGravity: 0.16, terrestrialGravity: 0.7, habitabilityModifier: 0, label: '0.16 G / 0.7 G' },
-  { roll: 11, dwarfGravity: 0.18, terrestrialGravity: 0.9, habitabilityModifier: 0, label: '0.18 G / 0.9 G' },
-  { roll: 12, dwarfGravity: 0.20, terrestrialGravity: 1.0, habitabilityModifier: 0, label: '0.20 G / 1.0 G' },
+  { roll: 2, dwarfGravity: 0.001, terrestrialGravity: 0.3, habitabilityModifier: -2, label: '0.001 G / 0.3 G' },
+  { roll: 3, dwarfGravity: 0.02, terrestrialGravity: 0.4, habitabilityModifier: -1.5, label: '0.02 G / 0.4 G' },
+  { roll: 4, dwarfGravity: 0.04, terrestrialGravity: 0.5, habitabilityModifier: -1, label: '0.04 G / 0.5 G' },
+  { roll: 5, dwarfGravity: 0.06, terrestrialGravity: 0.7, habitabilityModifier: -0.5, label: '0.06 G / 0.7 G' },
+  { roll: 6, dwarfGravity: 0.08, terrestrialGravity: 0.9, habitabilityModifier: 0, label: '0.08 G / 0.9 G' },
+  { roll: 7, dwarfGravity: 0.10, terrestrialGravity: 1.0, habitabilityModifier: 0, label: '0.10 G / 1.0 G' },
+  { roll: 8, dwarfGravity: 0.12, terrestrialGravity: 1.0, habitabilityModifier: 0, label: '0.12 G / 1.0 G' },
+  { roll: 9, dwarfGravity: 0.14, terrestrialGravity: 1.2, habitabilityModifier: 0, label: '0.14 G / 1.2 G' },
+  { roll: 10, dwarfGravity: 0.16, terrestrialGravity: 1.5, habitabilityModifier: -0.5, label: '0.16 G / 1.5 G' },
+  { roll: 11, dwarfGravity: 0.18, terrestrialGravity: 2.0, habitabilityModifier: -1.5, label: '0.18 G / 2.0 G' },
+  { roll: 12, dwarfGravity: 0.20, terrestrialGravity: 3.0, habitabilityModifier: -2.5, label: '0.20 G / 3.0 G' },
 ];
 
 /**

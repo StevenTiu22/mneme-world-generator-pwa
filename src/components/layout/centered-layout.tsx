@@ -87,12 +87,18 @@ const ROUTE_CONFIG: Record<string, RouteConfig> = {
     showPrevious: true,
     showNext: true,
     previousPath: "/create-new/moons",
+    nextPath: "/create-new/circumstellar-disks",
+  },
+  "/create-new/circumstellar-disks": {
+    showPrevious: true,
+    showNext: true,
+    previousPath: "/create-new/secondary-planets",
     nextPath: "/create-new/planetary-system",
   },
   "/create-new/planetary-system": {
     showPrevious: true,
     showNext: false,
-    previousPath: "/create-new/secondary-planets",
+    previousPath: "/create-new/circumstellar-disks",
   },
 };
 
@@ -131,9 +137,24 @@ export function CenteredLayout() {
     // Also check on resize (in case content height changes)
     window.addEventListener("resize", handleScroll);
 
+    // Observe DOM changes to re-check scroll position when content loads dynamically
+    // This is crucial for pages that load data asynchronously (like Starport page)
+    const observer = new MutationObserver(() => {
+      // Debounce the check to avoid excessive calls
+      setTimeout(handleScroll, 100);
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['style', 'class'], // Only watch style/class changes that might affect layout
+    });
+
     return () => {
       window.removeEventListener("scroll", handleScroll);
       window.removeEventListener("resize", handleScroll);
+      observer.disconnect();
     };
   }, []);
 
@@ -149,6 +170,9 @@ export function CenteredLayout() {
 
     // Check immediately on route change
     setTimeout(handleScroll, 100);
+
+    // Also check after a longer delay to catch slower-loading content
+    setTimeout(handleScroll, 500);
   }, [location.pathname]);
 
   const handlePrevious = () => {
@@ -195,16 +219,19 @@ export function CenteredLayout() {
         </div>
       </div>
 
-      {/* Fixed navigation buttons at bottom right - only visible when scrolled to bottom */}
+      {/* Fixed navigation buttons at bottom right - always visible on mobile, scroll-to-show on desktop */}
       {(navConfig.showPrevious ||
         navConfig.showNext ||
         navConfig.showFinish) && (
         <div
-          className={`fixed bottom-8 right-8 z-40 flex gap-4 transition-all duration-300 ${
-            showButtons
-              ? "opacity-100 translate-y-0"
-              : "opacity-0 translate-y-4 pointer-events-none"
-          }`}
+          className={`fixed bottom-8 right-8 z-40 flex gap-4 transition-all duration-300
+            ${
+              // On mobile (< md): always visible
+              // On desktop (>= md): only visible when scrolled to bottom
+              showButtons
+                ? "opacity-100 translate-y-0"
+                : "opacity-100 translate-y-0 md:opacity-0 md:translate-y-4 md:pointer-events-none"
+            }`}
         >
           {navConfig.showPrevious && (
             <Button

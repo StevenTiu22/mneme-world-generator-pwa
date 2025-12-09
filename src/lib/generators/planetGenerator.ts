@@ -477,3 +477,14 @@ export function validatePlanetData(planetData: PlanetData): {
 
   return { isValid: errors.length === 0, errors };
 }
+
+// =====================
+// Disk Generation Re-exports
+// =====================
+
+/**
+ * Re-export disk generation functions and tables for unified import
+ * Usage: import { generateDisk, DISK_MASS_TABLE } from '@/lib/generators/planetGenerator';
+ */
+export * from './diskGenerator';
+export * from './diskTables';

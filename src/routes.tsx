@@ -16,6 +16,7 @@ import { CreatePosition } from "./pages/CreatePosition";
 import { CreateInhabitants } from "./pages/CreateInhabitants";
 import { CreateMoons } from "./pages/CreateMoons";
 import { CreateSecondaryPlanets } from "./pages/CreateSecondaryPlanets";
+import CreateCircumstellarDisks from "./pages/CreateCircumstellarDisks";
 import { CreatePlanetarySystem } from "./pages/CreatePlanetarySystem";
 
 export default function AppRoutes() {
@@ -39,6 +40,7 @@ export default function AppRoutes() {
         <Route path="inhabitants" element={<CreateInhabitants />} />
         <Route path="moons" element={<CreateMoons />} />
         <Route path="secondary-planets" element={<CreateSecondaryPlanets />} />
+        <Route path="circumstellar-disks" element={<CreateCircumstellarDisks />} />
         <Route path="planetary-system" element={<CreatePlanetarySystem />} />
       </Route>
     </Routes>

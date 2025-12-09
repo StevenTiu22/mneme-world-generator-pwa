@@ -14,6 +14,7 @@ import type { WorldData } from '@/models/world';
 import type { MoonData } from '@/models/world/moon';
 import type { PlanetData } from '@/models/world/planet';
 import type { StarportData } from '@/models/world/starport';
+import type { BrownDwarfData } from '@/models/world/brownDwarf';
 
 // =====================
 // Database Schema
@@ -27,6 +28,7 @@ import type { StarportData } from '@/models/world/starport';
  * Version 3: Added worlds table for planetary data
  * Version 4: Added moons and planets tables for complete system modeling
  * Version 5: Added starports table for starport facilities data
+ * Version 6: Added brownDwarfs table for brown dwarf bodies (Milestone 6)
  */
 export class MnemeDB extends Dexie {
   // Reference data tables (read-only, seeded once on first load)
@@ -39,6 +41,7 @@ export class MnemeDB extends Dexie {
   moons!: EntityTable<MoonData, 'id'>;
   planets!: EntityTable<PlanetData, 'id'>;
   starports!: EntityTable<StarportData, 'id'>;
+  brownDwarfs!: EntityTable<BrownDwarfData, 'id'>;
 
   constructor() {
     super('MnemeDB');
@@ -127,6 +130,35 @@ export class MnemeDB extends Dexie {
       // User starports - port facilities linked to specific worlds
       // Indexed by worldId for efficient world-specific queries
       starports: 'id, worldId, createdAt',
+    });
+
+    // Database schema v6 - Add brownDwarfs table (Milestone 6)
+    this.version(6).stores({
+      // Reference data (unchanged)
+      stellarProperties: 'id, [stellarClass+stellarGrade]',
+
+      // User stars (unchanged)
+      stars: 'id, name, stellarClass, stellarGrade, createdAt',
+
+      // User star systems (unchanged)
+      starSystems: 'id, name, createdAt',
+
+      // User worlds (unchanged)
+      worlds: 'id, name, starSystemId, createdAt',
+
+      // User moons (unchanged)
+      moons: 'id, name, worldId, starSystemId, createdAt',
+
+      // User planets (unchanged)
+      planets: 'id, name, starSystemId, orbitPosition, createdAt',
+
+      // User starports (unchanged)
+      starports: 'id, worldId, createdAt',
+
+      // User brown dwarfs - substellar objects (13-80 Jupiter masses)
+      // Indexed by starSystemId for system-wide queries
+      // Indexed by orbitPosition for orbital organization
+      brownDwarfs: 'id, name, starSystemId, orbitPosition, createdAt',
     });
   }
 }
