@@ -96,6 +96,7 @@ const DEVELOPMENT_OPTIONS = [
 ];
 
 // Helper function to calculate habitability from habitability data
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function calculateHabitabilityFromData(data: any): number {
   let total = 0;
 
@@ -363,7 +364,7 @@ export function CreateWorldStarport() {
   useEffect(() => {
     if (context) {
       context.setNextDisabled(!isStarportComplete);
-      context.setNextHandler(() => handleNext);
+      context.setNextHandler(handleNext);
     }
   }, [isStarportComplete, handleNext, context]);
 

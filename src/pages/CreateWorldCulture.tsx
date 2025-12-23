@@ -201,7 +201,7 @@ export function CreateWorldCulture() {
   useEffect(() => {
     if (context) {
       context.setNextDisabled(!isCultureComplete);
-      context.setNextHandler(() => handleNext);
+      context.setNextHandler(handleNext);
     }
   }, [isCultureComplete, handleNext, context]);
 

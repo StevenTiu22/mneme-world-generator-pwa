@@ -171,14 +171,14 @@ export function CreatePosition() {
   // Handler for Next button
   const handleNext = useCallback(() => {
     saveData();
-    navigate("../planetary-system");
+    navigate("../moons");
   }, [navigate, saveData]);
 
   // Update Next button state
   useEffect(() => {
     if (context) {
       context.setNextDisabled(!isFormComplete);
-      context.setNextHandler(() => handleNext);
+      context.setNextHandler(handleNext);
     }
   }, [isFormComplete, handleNext, context]);
 

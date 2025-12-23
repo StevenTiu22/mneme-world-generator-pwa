@@ -31,9 +31,10 @@ export async function saveMoon(moonData: MoonData): Promise<MoonData> {
       // Update existing moon
       await db.moons.put(dataToSave);
     } else {
-      // Create new moon
-      const id = await db.moons.add(dataToSave);
-      dataToSave.id = String(id);
+      // Create new moon - generate UUID
+      const id = crypto.randomUUID();
+      dataToSave.id = id;
+      await db.moons.add(dataToSave);
     }
 
     return dataToSave;
@@ -54,6 +55,7 @@ export async function saveMoons(moons: MoonData[]): Promise<MoonData[]> {
     const now = new Date();
     const moonsToSave = moons.map((moon) => ({
       ...moon,
+      id: moon.id || crypto.randomUUID(), // Generate UUID if not present
       updatedAt: now,
       createdAt: moon.createdAt || now,
     }));

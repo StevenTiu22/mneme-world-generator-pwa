@@ -209,7 +209,7 @@ export function CreateWorldContext() {
   useEffect(() => {
     if (context) {
       context.setNextDisabled(!techLevel);
-      context.setNextHandler(() => handleNext);
+      context.setNextHandler(handleNext);
     }
   }, [techLevel, handleNext, context]);
 
@@ -237,7 +237,7 @@ export function CreateWorldContext() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground">Stellar Classification</p>
                     <p className="text-lg font-semibold font-mono">
@@ -423,7 +423,7 @@ export function CreateWorldContext() {
                   <p className="text-xs font-semibold text-muted-foreground mb-2">
                     HABITABILITY MODIFIERS (PREVIEW)
                   </p>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                     <div className="p-2 bg-muted/30 rounded">
                       <p className="text-muted-foreground">Tech Level</p>
                       <p className="font-semibold">TL {techLevel || '11'}</p>

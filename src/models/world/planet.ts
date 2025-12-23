@@ -75,6 +75,9 @@ export interface PlanetDiceRolls {
   typeRoll?: number;
   sizeRoll?: number;
   densityRoll?: number;
+  // Disk-specific rolls
+  massRoll?: number;
+  zoneRoll?: number;
 }
 
 // Type guards for runtime validation

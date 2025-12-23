@@ -10,6 +10,21 @@ import type { PlanetData } from '@/models/world/planet';
 import { PlanetType, type DiskZone } from '@/models/world/planet';
 
 // =====================
+// ID Generation
+// =====================
+
+/**
+ * Generate a unique planet ID
+ *
+ * @returns Unique planet ID in format: planet_{timestamp}_{random}
+ */
+export function generatePlanetId(): string {
+  const timestamp = Date.now().toString(36);
+  const randomSuffix = Math.random().toString(36).substring(2, 8);
+  return `planet_${timestamp}_${randomSuffix}`;
+}
+
+// =====================
 // Create & Update
 // =====================
 
@@ -331,19 +346,27 @@ export async function getPlanetCountByType(
  *
  * @param starSystemId - Star system ID
  * @param maxOrbits - Maximum number of orbits (default 10)
+ * @param additionalOccupiedOrbits - Additional orbits to exclude (e.g., primary world orbit from localStorage)
  * @returns Array of available orbit positions
  */
 export async function getAvailableOrbits(
   starSystemId: string,
-  maxOrbits: number = 10
+  maxOrbits: number = 10,
+  additionalOccupiedOrbits: number[] = []
 ): Promise<number[]> {
   try {
     const planets = await getPlanetsByStarSystem(starSystemId);
     const occupiedOrbits = planets.map((p) => p.orbitPosition);
 
+    // Combine database orbits with additional excluded orbits
+    const allOccupiedOrbits = [
+      ...occupiedOrbits,
+      ...additionalOccupiedOrbits
+    ];
+
     const availableOrbits: number[] = [];
     for (let i = 1; i <= maxOrbits; i++) {
-      if (!occupiedOrbits.includes(i)) {
+      if (!allOccupiedOrbits.includes(i)) {
         availableOrbits.push(i);
       }
     }

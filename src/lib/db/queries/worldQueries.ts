@@ -5,6 +5,7 @@
  * Handles saving, loading, and deleting user-created worlds.
  */
 
+import { v4 as uuidv4 } from 'uuid';
 import { db } from '../database';
 import type { WorldData } from '@/models/world';
 
@@ -202,4 +203,17 @@ export async function worldExists(id: string): Promise<boolean> {
     console.error('Error checking world existence:', error);
     return false;
   }
+}
+
+// =====================
+// ID Generation
+// =====================
+
+/**
+ * Generate a unique world ID using UUID v4
+ *
+ * @returns Unique world ID
+ */
+export function generateWorldId(): string {
+  return uuidv4();
 }

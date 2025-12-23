@@ -282,19 +282,19 @@ export function CreateHabitability() {
         const data: HabitabilityData = JSON.parse(saved);
 
         setAtmosphereRoll(data.atmosphereRoll ?? null);
-        setAtmosphere(data.atmosphere);
+        setAtmosphere(data.atmosphere || "");
 
         setTemperatureRoll(data.temperatureRoll ?? null);
-        setTemperature(data.temperature);
+        setTemperature(data.temperature || "");
 
         setHazardTypeRoll(data.hazardTypeRoll ?? null);
-        setHazardType(data.hazardType);
+        setHazardType(data.hazardType || "");
 
         setHazardIntensityRoll(data.hazardIntensityRoll ?? null);
-        setHazardIntensity(data.hazardIntensity);
+        setHazardIntensity(data.hazardIntensity || "");
 
         setBiochemicalResourcesRoll(data.biochemicalResourcesRoll ?? null);
-        setBiochemicalResources(data.biochemicalResources);
+        setBiochemicalResources(data.biochemicalResources || "");
 
         console.log("📂 Loaded habitability data:", data);
       } catch (e) {
@@ -321,7 +321,7 @@ export function CreateHabitability() {
   useEffect(() => {
     if (context) {
       context.setNextDisabled(!isFormComplete);
-      context.setNextHandler(() => handleNext);
+      context.setNextHandler(handleNext);
     }
   }, [isFormComplete, handleNext, context]);
 
@@ -373,8 +373,10 @@ export function CreateHabitability() {
                   <SelectValue placeholder="Select atmospheric pressure" />
                 </SelectTrigger>
                 <SelectContent>
-                  {ATMOSPHERE_TABLE.map((entry) => (
-                    <SelectItem key={entry.roll} value={entry.pressure}>
+                  {ATMOSPHERE_TABLE.filter((entry, index, self) =>
+                    self.findIndex(e => e.pressure === entry.pressure) === index
+                  ).map((entry) => (
+                    <SelectItem key={entry.pressure} value={entry.pressure}>
                       {entry.label} - {entry.description}
                     </SelectItem>
                   ))}
@@ -431,8 +433,10 @@ export function CreateHabitability() {
                   <SelectValue placeholder="Select temperature range" />
                 </SelectTrigger>
                 <SelectContent>
-                  {TEMPERATURE_TABLE.map((entry) => (
-                    <SelectItem key={entry.roll} value={entry.temperature}>
+                  {TEMPERATURE_TABLE.filter((entry, index, self) =>
+                    self.findIndex(e => e.temperature === entry.temperature) === index
+                  ).map((entry) => (
+                    <SelectItem key={entry.temperature} value={entry.temperature}>
                       {entry.label} - {entry.description}
                     </SelectItem>
                   ))}
@@ -492,7 +496,7 @@ export function CreateHabitability() {
                   setHazardIntensityRoll(null);
                 }
               }}>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {HAZARD_TYPE_TABLE.filter((entry, index, self) =>
                     self.findIndex(e => e.hazardType === entry.hazardType) === index
                   ).map((entry) => (
@@ -609,8 +613,10 @@ export function CreateHabitability() {
                   <SelectValue placeholder="Select resource availability" />
                 </SelectTrigger>
                 <SelectContent>
-                  {BIOCHEMICAL_RESOURCES_TABLE.map((entry) => (
-                    <SelectItem key={entry.roll} value={entry.resources}>
+                  {BIOCHEMICAL_RESOURCES_TABLE.filter((entry, index, self) =>
+                    self.findIndex(e => e.resources === entry.resources) === index
+                  ).map((entry) => (
+                    <SelectItem key={entry.resources} value={entry.resources}>
                       {entry.label} - {entry.description}
                     </SelectItem>
                   ))}

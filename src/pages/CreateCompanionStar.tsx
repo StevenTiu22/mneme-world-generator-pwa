@@ -376,7 +376,7 @@ export function CreateCompanionStar() {
       }));
 
       // Get starSystemId from primaryStar (set in CreatePrimaryStar)
-      const starSystemId = (primaryStarData as any).starSystemId || generateSystemId();
+      const starSystemId = (primaryStarData as StarData & { starSystemId?: string }).starSystemId || generateSystemId();
 
       // Create StarSystem object
       const starSystem: StarSystem = {
@@ -461,7 +461,7 @@ export function CreateCompanionStar() {
       const canProceed = !hasCompanions || hasConfiguredCompanion;
 
       context.setNextDisabled(!canProceed);
-      context.setNextHandler(() => handleNext);
+      context.setNextHandler(handleNext);
 
       // NOTE: handleFinish is kept for potential future "Save & Exit" functionality
       // but is not currently used in the wizard flow
@@ -539,12 +539,12 @@ export function CreateCompanionStar() {
 
   return (
     <TooltipProvider>
-      <div className="container max-w-5xl mx-auto py-8">
-        <div className="mb-6">
-          <h1 className="text-4xl font-bold mb-2">
+      <div className="container max-w-5xl mx-auto px-3 sm:px-6 py-4 sm:py-8">
+        <div className="mb-4 sm:mb-6">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2">
             Creating your Companion Star(s)
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm sm:text-base text-muted-foreground">
             Configure companion stars for your system. You can skip this step if
             you want a single-star system.
           </p>
@@ -552,15 +552,15 @@ export function CreateCompanionStar() {
 
         {/* Single-Star System Skip Card - Prominent when no companions */}
         {companions.length === 0 && (
-          <Card className="mb-6 border-2 border-primary/20 bg-primary/5">
-            <CardContent className="pt-6">
+          <Card className="mb-4 sm:mb-6 border-2 border-primary/20 bg-primary/5">
+            <CardContent className="p-4 sm:pt-6">
               <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                 <div className="flex-1 text-center md:text-left">
-                  <h3 className="text-lg font-semibold mb-1 flex items-center justify-center md:justify-start gap-2">
-                    <Info className="h-5 w-5 text-primary" />
+                  <h3 className="text-base sm:text-lg font-semibold mb-1 flex items-center justify-center md:justify-start gap-2">
+                    <Info className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                     Creating a Single-Star System?
                   </h3>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-xs sm:text-sm text-muted-foreground">
                     Most star systems have only one star. Skip companion configuration to create a single-star system and continue to world creation.
                   </p>
                 </div>
@@ -568,9 +568,9 @@ export function CreateCompanionStar() {
                   size="lg"
                   variant="default"
                   onClick={handleSkip}
-                  className="gap-2 min-w-[200px] shadow-lg"
+                  className="gap-2 w-full md:w-auto md:min-w-[200px] shadow-lg"
                 >
-                  <SkipForward className="h-5 w-5" />
+                  <SkipForward className="h-4 w-4 sm:h-5 sm:w-5" />
                   Skip - Single Star
                 </Button>
               </div>
@@ -589,11 +589,11 @@ export function CreateCompanionStar() {
           </Alert>
         )}
 
-        <div className="flex gap-0 rounded-lg overflow-hidden shadow-lg min-h-[600px]">
+        <div className="flex flex-col md:flex-row gap-0 rounded-lg overflow-hidden shadow-lg md:min-h-[600px]">
           {/* Left Panel */}
-          <div className="bg-muted pl-8 py-8 w-80 flex-shrink-0 flex flex-col">
-            <div className="space-y-4 flex-1">
-              <div className="pr-8">
+          <div className="bg-muted px-4 py-4 md:pl-8 md:py-8 md:w-80 flex-shrink-0 flex flex-col">
+            <div className="space-y-3 md:space-y-4 flex-1">
+              <div className="md:pr-8">
                 <Label htmlFor="system-type">System Type</Label>
                 <Select
                   value={systemType}
@@ -616,12 +616,12 @@ export function CreateCompanionStar() {
                 </Select>
               </div>
 
-              <div className="pr-8">
+              <div className="md:pr-8">
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
                       variant="secondary"
-                      className="w-full"
+                      className="w-full text-sm md:text-base"
                       onClick={handleGenerateProcedurally}
                       disabled={isGenerating}
                     >
@@ -640,13 +640,13 @@ export function CreateCompanionStar() {
                   <div
                     key={companion.id}
                     onClick={() => setActiveCompanion(index)}
-                    className={`w-full flex justify-between items-center h-auto py-3 text-left font-normal cursor-pointer rounded-md border transition-colors ${
+                    className={`w-full flex justify-between items-center h-auto py-2 md:py-3 text-left text-sm md:text-base font-normal cursor-pointer rounded-md border transition-colors ${
                       activeCompanion === index
-                        ? "bg-primary text-primary-foreground rounded-l-md rounded-r-none border-primary"
-                        : "bg-background hover:bg-accent hover:text-accent-foreground mr-8 pr-8 border-input"
+                        ? "bg-primary text-primary-foreground md:rounded-l-md md:rounded-r-none border-primary"
+                        : "bg-background hover:bg-accent hover:text-accent-foreground md:mr-8 md:pr-8 border-input"
                     }`}
                   >
-                    <span className="flex items-center gap-2 pl-4">
+                    <span className="flex items-center gap-2 pl-3 md:pl-4">
                       {companion.name}
                       {!isCompanionComplete(companion) && (
                         <span className="text-xs opacity-60">(incomplete)</span>
@@ -656,14 +656,14 @@ export function CreateCompanionStar() {
                       <div className="flex gap-1 pr-2">
                         <button
                           type="button"
-                          className="inline-flex items-center justify-center h-6 w-6 rounded-md hover:bg-background/20"
+                          className="inline-flex items-center justify-center h-7 w-7 md:h-6 md:w-6 rounded-md hover:bg-background/20"
                           onClick={(e) => openRenameDialog(e, index)}
                         >
                           <Pencil className="h-3 w-3" />
                         </button>
                         <button
                           type="button"
-                          className="inline-flex items-center justify-center h-6 w-6 rounded-md hover:bg-background/20"
+                          className="inline-flex items-center justify-center h-7 w-7 md:h-6 md:w-6 rounded-md hover:bg-background/20"
                           onClick={(e) => removeCompanion(e, index)}
                         >
                           <Trash2 className="h-3 w-3" />
@@ -674,10 +674,10 @@ export function CreateCompanionStar() {
                 ))}
               </div>
 
-              <div className="pr-8 space-y-2">
+              <div className="md:pr-8 space-y-2">
                 <Button
                   variant="outline"
-                  className="w-full"
+                  className="w-full text-sm md:text-base"
                   onClick={addCompanion}
                   disabled={!canAddMore}
                 >
@@ -689,7 +689,7 @@ export function CreateCompanionStar() {
                 {companions.length > 0 && (
                   <Button
                     variant="ghost"
-                    className="w-full text-muted-foreground hover:text-foreground"
+                    className="w-full text-sm md:text-base text-muted-foreground hover:text-foreground"
                     onClick={handleSkip}
                   >
                     <SkipForward className="h-4 w-4 mr-2" />
@@ -701,20 +701,20 @@ export function CreateCompanionStar() {
           </div>
 
           {/* Right Panel - Refined Design */}
-          <div className="flex-1 bg-background overflow-y-auto max-h-[600px]">
+          <div className="flex-1 bg-background overflow-y-auto md:max-h-[600px]">
             {activeCompanionData ? (
-              <div className="p-8 space-y-6">
+              <div className="p-4 sm:p-6 md:p-8 space-y-4 md:space-y-6">
                 {/* Header with status badge */}
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                   <div>
-                    <h2 className="text-2xl font-semibold">
+                    <h2 className="text-xl sm:text-2xl font-semibold">
                       {activeCompanionData.name}
                     </h2>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs sm:text-sm text-muted-foreground">
                       Configure companion star properties
                     </p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
                     {activeCompanionData.generationMethod === GenerationMethod.PROCEDURAL && (
                       <Badge variant="outline" className="gap-1">
                         <Dices className="h-3 w-3" />
@@ -736,8 +736,8 @@ export function CreateCompanionStar() {
 
                 {/* Star Class Section */}
                 <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2">
+                  <CardHeader className="p-4 sm:p-6">
+                    <CardTitle className="text-base sm:text-lg flex items-center gap-2">
                       Star Class *
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -749,8 +749,8 @@ export function CreateCompanionStar() {
                       </Tooltip>
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-4 gap-3">
+                  <CardContent className="p-4 sm:p-6">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
                       {starClasses.map((starClass) => (
                         <Tooltip key={starClass}>
                           <TooltipTrigger asChild>
@@ -761,12 +761,12 @@ export function CreateCompanionStar() {
                                   : "outline"
                               }
                               onClick={() => handleClassSelect(starClass)}
-                              className="h-16 text-lg font-bold relative"
+                              className="h-14 sm:h-16 text-base sm:text-lg font-bold relative"
                             >
                               {starClass}
                               {activeCompanionData.class === starClass &&
                                 starClass !== "Random" && (
-                                  <span className="absolute top-1 right-1 text-[10px] font-normal">
+                                  <span className="absolute top-1 right-1 text-[9px] sm:text-[10px] font-normal">
                                     {STAR_CLASS_INFO[starClass].color}
                                   </span>
                                 )}
@@ -850,16 +850,16 @@ export function CreateCompanionStar() {
 
                 {/* Additional Settings */}
                 <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">
+                  <CardHeader className="p-4 sm:p-6">
+                    <CardTitle className="text-base sm:text-lg">
                       Additional Properties
                     </CardTitle>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs sm:text-sm text-muted-foreground">
                       Optional parameters (will be auto-generated if not
                       specified)
                     </p>
                   </CardHeader>
-                  <CardContent className="space-y-6">
+                  <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
                     {/* Luminosity Class */}
                     <div className="space-y-2">
                       <Label
@@ -1040,29 +1040,29 @@ export function CreateCompanionStar() {
                 />
               </div>
             ) : (
-              <div className="flex items-center justify-center h-full p-8">
-                <Card className="max-w-md">
-                  <CardContent className="pt-6">
+              <div className="flex items-center justify-center min-h-[300px] md:h-full p-4 sm:p-8">
+                <Card className="max-w-md w-full">
+                  <CardContent className="p-4 sm:pt-6">
                     <div className="text-center space-y-4">
                       <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center">
                         <Plus className="h-6 w-6 text-muted-foreground" />
                       </div>
                       <div>
-                        <h3 className="text-lg font-semibold mb-2">
+                        <h3 className="text-base sm:text-lg font-semibold mb-2">
                           {companions.length === 0
                             ? "No Companion Stars Yet"
                             : "Select a Companion Star"}
                         </h3>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-xs sm:text-sm text-muted-foreground">
                           {companions.length === 0
-                            ? "Add a companion star from the left panel to begin configuration"
+                            ? "Add a companion star from the panel above to begin configuration"
                             : "Choose a companion star from the list to configure its properties"}
                         </p>
                       </div>
                       <Button
                         variant="default"
                         onClick={handleFinish}
-                        className="mt-4"
+                        className="mt-4 w-full sm:w-auto"
                       >
                         <Check className="h-4 w-4 mr-2" />
                         Finish & Save World
@@ -1107,12 +1107,12 @@ export function CreateCompanionStar() {
 
         {/* Saving Status Overlay */}
         {isSaving && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-            <Card className="p-8 min-w-[300px]">
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <Card className="p-4 sm:p-8 w-full max-w-sm">
               <CardContent className="pt-6">
                 <div className="text-center space-y-4">
-                  <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
-                  <p className="text-xl font-semibold">{saveStatus}</p>
+                  <Loader2 className="h-10 w-10 sm:h-12 sm:w-12 animate-spin mx-auto text-primary" />
+                  <p className="text-base sm:text-xl font-semibold">{saveStatus}</p>
                 </div>
               </CardContent>
             </Card>

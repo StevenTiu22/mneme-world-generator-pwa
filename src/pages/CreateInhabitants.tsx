@@ -22,7 +22,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
 import { roll2D6 } from "@/lib/dice";
 import {
   WEALTH_TABLE,
@@ -302,7 +301,7 @@ export function CreateInhabitants() {
   useEffect(() => {
     if (context) {
       context.setNextDisabled(!isFormComplete);
-      context.setNextHandler(() => handleNext);
+      context.setNextHandler(handleNext);
     }
   }, [isFormComplete, handleNext, context]);
 
