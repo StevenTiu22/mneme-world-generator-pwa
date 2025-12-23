@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useOutletContext } from 'react-router-dom';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate, useOutletContext } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -39,7 +39,33 @@ interface LayoutContext {
   setNextHandler: (handler: () => void) => void;
 }
 
+/**
+ * localStorage state for moon wizard
+ * Stores transient wizard form state, not final moon data
+ */
+interface MoonWizardState {
+  // Form state
+  moonName: string;
+  generationMode: 'procedural' | 'custom';
+  hasSkipped: boolean;
+
+  // Generated moon preview (not yet saved to IndexedDB)
+  generatedMoon: MoonData | null;
+
+  // IDs of moons saved to IndexedDB (for validation)
+  savedMoonIds: string[];
+
+  // Parent world context (for validation)
+  worldId: string;
+  worldName: string;
+  starSystemId: string;
+
+  // Metadata
+  lastUpdated: string; // ISO timestamp
+}
+
 export function CreateMoons() {
+  const navigate = useNavigate();
   const context = useOutletContext<LayoutContext>();
 
   // Load world data from localStorage
@@ -58,28 +84,136 @@ export function CreateMoons() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [hasSkipped, setHasSkipped] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isLoaded, setIsLoaded] = useState(false); // Prevents race conditions
 
   // Load moons from database using useLiveQuery
-  const moons =
-    useLiveQuery(() => (worldId ? getMoonsByWorld(worldId) : Promise.resolve([])), [worldId]) || [];
+  const moonsQuery = useLiveQuery(
+    () => (worldId ? getMoonsByWorld(worldId) : Promise.resolve([])),
+    [worldId]
+  );
+
+  // Memoize moons to prevent dependency changes on every render
+  const moons = useMemo(() => moonsQuery || [], [moonsQuery]);
 
   const moonCount = moons.length;
 
+  // Save wizard state to localStorage
+  const saveData = useCallback(() => {
+    // Only save if we have valid world and system IDs
+    if (!worldId || !starSystemId) {
+      console.warn('Cannot save moon wizard state: missing worldId or starSystemId');
+      return;
+    }
+
+    const wizardState: MoonWizardState = {
+      moonName,
+      generationMode,
+      hasSkipped,
+      generatedMoon,
+      savedMoonIds: moons.map((m) => m.id!).filter(Boolean), // Extract IDs from DB moons
+      worldId,
+      worldName,
+      starSystemId,
+      lastUpdated: new Date().toISOString(),
+    };
+
+    try {
+      localStorage.setItem('moonWizard', JSON.stringify(wizardState));
+    } catch (error) {
+      console.error('Failed to save moon wizard state to localStorage:', error);
+      // Don't throw - localStorage is not critical
+    }
+  }, [
+    moonName,
+    generationMode,
+    hasSkipped,
+    generatedMoon,
+    moons,
+    worldId,
+    worldName,
+    starSystemId,
+  ]);
+
+  // Load wizard state from localStorage on mount
+  useEffect(() => {
+    const loadData = async () => {
+      const saved = localStorage.getItem('moonWizard');
+      if (saved) {
+        try {
+          const data: MoonWizardState = JSON.parse(saved);
+
+          // Validation: Ensure we're on the same world
+          if (data.worldId === worldId) {
+            // Restore form state
+            setMoonName(data.moonName || '');
+            setGenerationMode(data.generationMode || 'procedural');
+            setHasSkipped(data.hasSkipped || false);
+
+            // Restore generated moon preview (if it exists)
+            if (data.generatedMoon) {
+              setGeneratedMoon(data.generatedMoon);
+            }
+
+            console.log('✅ Loaded moon wizard state from localStorage');
+          } else {
+            // Different world - clear stale data
+            console.log('⚠️ World ID mismatch, clearing stale moon wizard state');
+            localStorage.removeItem('moonWizard');
+          }
+        } catch (error) {
+          console.error('Failed to load moon wizard state from localStorage:', error);
+          // Corrupted data - clear it
+          localStorage.removeItem('moonWizard');
+        }
+      }
+
+      // Mark as loaded to enable auto-save
+      setIsLoaded(true);
+    };
+
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run once on mount
+
+  // Auto-save wizard state when it changes (only after initial load)
+  useEffect(() => {
+    if (isLoaded) {
+      saveData();
+    }
+  }, [saveData, isLoaded]);
+
+  // Validate required IDs on mount
+  useEffect(() => {
+    if (!worldId || !starSystemId) {
+      setError(
+        'Missing world or star system information. Please go back and complete the previous steps (Main World and World Context).'
+      );
+    }
+  }, [worldId, starSystemId]);
+
   // Enable Next button if moons exist OR user has skipped
   useEffect(() => {
-    context.setNextDisabled(moonCount === 0 && !hasSkipped);
+    if (context) {
+      context.setNextDisabled(moonCount === 0 && !hasSkipped);
+    }
   }, [moonCount, hasSkipped, context]);
 
   // Handle Next button
   const handleNext = useCallback(() => {
-    // Save moons data to localStorage for persistence
+    // Save final moon data to localStorage for next wizard page
     localStorage.setItem('moons', JSON.stringify(moons));
-    // Navigate to next page (secondary planets)
-    // Note: actual route will be set up in routing configuration
-  }, [moons]);
+
+    // Clear wizard state (no longer needed after Next)
+    localStorage.removeItem('moonWizard');
+
+    // Navigate to circumstellar disks page
+    navigate('../circumstellar-disks');
+  }, [navigate, moons]);
 
   useEffect(() => {
-    context.setNextHandler(() => handleNext);
+    if (context) {
+      context.setNextHandler(handleNext);
+    }
   }, [handleNext, context]);
 
   // Generate a random moon
@@ -164,18 +298,18 @@ export function CreateMoons() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Create Moons</h1>
-        <p className="text-muted-foreground mt-2">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">Create Moons</h1>
+        <p className="text-sm sm:text-base text-muted-foreground mt-2">
           Add natural satellites to your world (optional)
         </p>
       </div>
 
       {/* Error Alert */}
       {error && (
-        <Alert variant="destructive">
+        <Alert variant="destructive" className="flex items-center ">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{error}</AlertDescription>
         </Alert>
@@ -184,14 +318,14 @@ export function CreateMoons() {
       {/* World Info */}
       <Card>
         <CardContent className="pt-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-sm text-muted-foreground">Current World</p>
-              <p className="text-lg font-semibold">{worldName}</p>
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+            <div className="text-center sm:text-left">
+              <p className="text-xs sm:text-sm text-muted-foreground">Current World</p>
+              <p className="text-base sm:text-lg font-semibold">{worldName}</p>
             </div>
-            <div className="text-right">
-              <p className="text-sm text-muted-foreground">Moons</p>
-              <p className="text-2xl font-bold">{moonCount}</p>
+            <div className="text-center sm:text-right">
+              <p className="text-xs sm:text-sm text-muted-foreground">Moons</p>
+              <p className="text-xl sm:text-2xl font-bold">{moonCount}</p>
             </div>
           </div>
         </CardContent>
@@ -226,16 +360,17 @@ export function CreateMoons() {
             <RadioGroup
               value={generationMode}
               onValueChange={(value) => setGenerationMode(value as 'procedural' | 'custom')}
+              className="grid grid-cols-1 sm:grid-cols-2 gap-3"
             >
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer">
                 <RadioGroupItem value="procedural" id="procedural" />
-                <Label htmlFor="procedural" className="font-normal cursor-pointer">
+                <Label htmlFor="procedural" className="font-normal cursor-pointer flex-1">
                   Procedural (2D6 generation)
                 </Label>
               </div>
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-3 p-3 border rounded-lg hover:bg-muted/50 cursor-pointer">
                 <RadioGroupItem value="custom" id="custom" />
-                <Label htmlFor="custom" className="font-normal cursor-pointer">
+                <Label htmlFor="custom" className="font-normal cursor-pointer flex-1">
                   Custom (manual entry)
                 </Label>
               </div>
@@ -244,8 +379,8 @@ export function CreateMoons() {
 
           {/* Generate Button */}
           {generationMode === 'procedural' && (
-            <Button onClick={handleGenerateMoon} className="w-full">
-              <Dices className="h-4 w-4 mr-2" />
+            <Button onClick={handleGenerateMoon} className="w-full h-12 text-base">
+              <Dices className="h-5 w-5 mr-2" />
               Generate Random Moon
             </Button>
           )}
@@ -253,8 +388,8 @@ export function CreateMoons() {
           {/* Generated Moon Results */}
           {generatedMoon && (
             <div className="mt-4 space-y-4 border-t pt-4">
-              <h3 className="font-semibold text-sm">Generated Moon Properties</h3>
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <h3 className="font-semibold text-sm sm:text-base">Generated Moon Properties</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-sm">
                 <div>
                   <p className="text-muted-foreground">Name</p>
                   <p className="font-medium">{generatedMoon.name}</p>
@@ -285,8 +420,8 @@ export function CreateMoons() {
                   </div>
                 )}
               </div>
-              <Button onClick={handleAddMoon} className="w-full">
-                <PlusCircle className="h-4 w-4 mr-2" />
+              <Button onClick={handleAddMoon} className="w-full h-12 text-base">
+                <PlusCircle className="h-5 w-5 mr-2" />
                 Add This Moon
               </Button>
             </div>
@@ -310,28 +445,31 @@ export function CreateMoons() {
               {moons.map((moon, index) => (
                 <div
                   key={moon.id || index}
-                  className="flex items-center justify-between p-4 border rounded-lg"
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border rounded-lg gap-3"
                 >
                   <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="font-semibold">{moon.name}</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-semibold text-base">{moon.name}</p>
                       <Badge variant="outline">{getMoonTypeLabel(moon.moonType)}</Badge>
                     </div>
                     <p className="text-sm text-muted-foreground mt-1">
                       {moon.size.toFixed(2)} LM • {moon.mass.toFixed(2)} LM • {moon.gravity.toFixed(3)} G
                     </p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 self-end sm:self-auto">
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => moon.id && handleEditMoon(moon)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
+                          <span>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-10 w-10"
+                              onClick={() => moon.id && handleEditMoon(moon)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          </span>
                         </TooltipTrigger>
                         <TooltipContent>Edit moon</TooltipContent>
                       </Tooltip>
@@ -339,13 +477,16 @@ export function CreateMoons() {
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => moon.id && setDeleteConfirmId(moon.id)}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
+                          <span>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-10 w-10"
+                              onClick={() => moon.id && setDeleteConfirmId(moon.id)}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </span>
                         </TooltipTrigger>
                         <TooltipContent>Delete moon</TooltipContent>
                       </Tooltip>
@@ -360,7 +501,7 @@ export function CreateMoons() {
 
       {/* Skip Button */}
       {moonCount === 0 && !hasSkipped && (
-        <Button variant="outline" onClick={handleSkip} className="w-full">
+        <Button variant="outline" onClick={handleSkip} className="w-full h-12 text-base">
           Skip - No Moons
         </Button>
       )}
@@ -392,7 +533,7 @@ export function CreateMoons() {
                   onChange={(e) => setEditingMoon({ ...editingMoon, name: e.target.value })}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="edit-size">Size (LM)</Label>
                   <Input

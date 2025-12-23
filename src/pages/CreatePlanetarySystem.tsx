@@ -43,6 +43,7 @@ export function CreatePlanetarySystem() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [summaryOpen, setSummaryOpen] = useState(true);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [worldSummary, setWorldSummary] = useState<any>(null);
 
   // Load moons and planets from database
@@ -301,7 +302,7 @@ export function CreatePlanetarySystem() {
         starportFeatures: worldStarport?.starport?.capabilities,
 
         // Culture properties
-        culturalTraits: worldCulture?.traits?.map((t: any) => t.trait),
+        culturalTraits: worldCulture?.traits?.map((t: { trait: string }) => t.trait),
 
         // Development
         techLevel: parseInt(worldContext.techLevel),
@@ -350,6 +351,7 @@ export function CreatePlanetarySystem() {
   };
 
   // Helper functions (duplicated from other pages for self-containment)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const calculateHabitabilityScore = (data: any): number => {
     let total = 0;
 
@@ -455,7 +457,7 @@ export function CreatePlanetarySystem() {
             </Badge>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 text-white">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-white">
             {body.type === "star" && (
               <div>
                 <p className="text-sm text-white/60 mb-1">Luminosity</p>
@@ -521,13 +523,15 @@ export function CreatePlanetarySystem() {
                 Add Disk
               </Button>
               <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="sm">
-                  <ChevronDown
-                    className={`h-4 w-4 transition-transform ${
-                      diskOpen ? "rotate-180" : ""
-                    }`}
-                  />
-                </Button>
+                <span>
+                  <Button variant="ghost" size="sm">
+                    <ChevronDown
+                      className={`h-4 w-4 transition-transform ${
+                        diskOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </Button>
+                </span>
               </CollapsibleTrigger>
             </div>
           </div>
@@ -550,7 +554,7 @@ export function CreatePlanetarySystem() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <p className="text-sm font-medium text-muted-foreground">
                             Zone
@@ -616,13 +620,15 @@ export function CreatePlanetarySystem() {
             <div className="flex items-center justify-between py-4 border-b">
               <h2 className="text-2xl font-bold">World Summary</h2>
               <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="sm">
-                  <ChevronDown
-                    className={`h-4 w-4 transition-transform ${
-                      summaryOpen ? "rotate-180" : ""
-                    }`}
-                  />
-                </Button>
+                <span>
+                  <Button variant="ghost" size="sm">
+                    <ChevronDown
+                      className={`h-4 w-4 transition-transform ${
+                        summaryOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </Button>
+                </span>
               </CollapsibleTrigger>
             </div>
 
@@ -633,7 +639,7 @@ export function CreatePlanetarySystem() {
                   <CardHeader>
                     <CardTitle>Basic Properties</CardTitle>
                   </CardHeader>
-                  <CardContent className="grid grid-cols-2 gap-4">
+                  <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <p className="text-sm text-muted-foreground">Name</p>
                       <p className="font-semibold">
@@ -750,7 +756,7 @@ export function CreatePlanetarySystem() {
                     <CardHeader>
                       <CardTitle>Habitability</CardTitle>
                     </CardHeader>
-                    <CardContent className="grid grid-cols-2 gap-4">
+                    <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <p className="text-sm text-muted-foreground">
                           Atmospheric Pressure
@@ -807,7 +813,7 @@ export function CreatePlanetarySystem() {
                     <CardHeader>
                       <CardTitle>Inhabitants</CardTitle>
                     </CardHeader>
-                    <CardContent className="grid grid-cols-2 gap-4">
+                    <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <p className="text-sm text-muted-foreground">
                           Population
@@ -866,7 +872,7 @@ export function CreatePlanetarySystem() {
                       <CardTitle>Starport</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <p className="text-sm text-muted-foreground">Class</p>
                           <p className="font-semibold text-2xl">
@@ -906,6 +912,7 @@ export function CreatePlanetarySystem() {
                               Bases Present
                             </p>
                             <div className="flex flex-wrap gap-2">
+                              {/* eslint-disable @typescript-eslint/no-explicit-any */}
                               {worldSummary.starport.bases
                                 .filter((base: any) => base.present)
                                 .map((base: any, idx: number) => (
@@ -917,6 +924,7 @@ export function CreatePlanetarySystem() {
                                     {base.type}
                                   </Badge>
                                 ))}
+                              {/* eslint-enable @typescript-eslint/no-explicit-any */}
                             </div>
                           </div>
                         )}
@@ -931,6 +939,7 @@ export function CreatePlanetarySystem() {
                       <CardTitle>Cultural Traits</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3">
+                      {/* eslint-disable @typescript-eslint/no-explicit-any */}
                       {worldSummary.culture.traits.map(
                         (trait: any, idx: number) => (
                           <div key={idx} className="p-3 rounded-lg bg-muted">
@@ -946,6 +955,7 @@ export function CreatePlanetarySystem() {
                           </div>
                         )
                       )}
+                      {/* eslint-enable @typescript-eslint/no-explicit-any */}
                     </CardContent>
                   </Card>
                 )}
@@ -973,18 +983,34 @@ export function CreatePlanetarySystem() {
 
         {/* Complete Button */}
         <div className="pt-8">
-          <Button
-            size="lg"
-            className="w-full"
-            onClick={handleCompleteWorld}
-            disabled={isSaving || saveSuccess}
-          >
-            {isSaving
-              ? "Saving World..."
-              : saveSuccess
-              ? "Saved!"
-              : "Complete & Save World"}
-          </Button>
+          {isSaving ? (
+            <Button
+              key="saving"
+              size="lg"
+              className="w-full"
+              disabled={true}
+            >
+              Saving World...
+            </Button>
+          ) : saveSuccess ? (
+            <Button
+              key="saved"
+              size="lg"
+              className="w-full"
+              disabled={true}
+            >
+              Saved!
+            </Button>
+          ) : (
+            <Button
+              key="complete"
+              size="lg"
+              className="w-full"
+              onClick={handleCompleteWorld}
+            >
+              Complete & Save World
+            </Button>
+          )}
         </div>
       </div>
     </div>

@@ -15,18 +15,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  Tooltip,
-  TooltipContent,
   TooltipProvider,
-  TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { AlertCircle, Sparkles, Disc, RefreshCw, Info } from 'lucide-react';
+import { AlertCircle, Sparkles, Disc, RefreshCw } from 'lucide-react';
 import { generateDisk, validateDiskData } from '@/lib/generators/diskGenerator';
-import {
-  DISK_MASS_TABLE,
-  DISK_ZONE_TABLE,
-  DISK_TYPE_TABLE,
-} from '@/lib/generators/diskTables';
 import {
   PlanetType,
   DiskType,
@@ -36,25 +28,24 @@ import {
   type PlanetData,
 } from '@/models/world/planet';
 import { GenerationMethod } from '@/models/common/types';
-import { savePlanet } from '@/lib/db/queries/planetQueries';
-import type { LayoutContext } from '@/components/layout/centered-layout';
+import { savePlanet, generatePlanetId } from '@/lib/db/queries/planetQueries';
+import type { CenteredLayoutContext } from '@/components/layout/centered-layout';
 import type { StellarZones } from '@/models/stellar/types/interface';
-import type { StarSystem } from '@/models/stellar/types/interface';
-import { roll2D6 } from '@/lib/dice';
 
 export default function CreateCircumstellarDisks() {
   const navigate = useNavigate();
-  const context = useOutletContext<LayoutContext>();
+  const context = useOutletContext<CenteredLayoutContext>();
 
   // State for disk properties
-  const [diskName, setDiskName] = useState('');
+  const [diskId] = useState(() => generatePlanetId());
+  const [diskName, setDiskName] = useState('Protoplanetary Disk (Hab-Outer)');
   const [diskType, setDiskType] = useState<DiskType>(DiskType.PROTOPLANETARY);
   const [diskZone, setDiskZone] = useState<DiskZone>(DiskZone.HABITABLE_OUTER);
   const [diskMass, setDiskMass] = useState(1);
   const [diskMassUnit, setDiskMassUnit] = useState<'CM' | 'LM' | 'EM' | 'JM'>('EM');
-  const [diskInnerRadius, setDiskInnerRadius] = useState(0);
-  const [diskOuterRadius, setDiskOuterRadius] = useState(0);
-  const [orbitPosition, setOrbitPosition] = useState(0);
+  const [diskInnerRadius, setDiskInnerRadius] = useState(1);
+  const [diskOuterRadius, setDiskOuterRadius] = useState(2);
+  const [orbitPosition, setOrbitPosition] = useState(1.5);
 
   // Dice rolls
   const [massRoll, setMassRoll] = useState<number | null>(null);
@@ -67,24 +58,31 @@ export default function CreateCircumstellarDisks() {
   const [generatedDisk, setGeneratedDisk] = useState<PlanetData | null>(null);
 
   // Load star system data for stellar zones
-  const [starSystem, setStarSystem] = useState<StarSystem | null>(null);
+  const [starSystemId, setStarSystemId] = useState<string | null>(null);
   const [stellarZones, setStellarZones] = useState<StellarZones | null>(null);
 
-  // Load star system from localStorage
+  // Load star system data from localStorage
   useEffect(() => {
-    const savedStarSystem = localStorage.getItem('starSystem');
-    if (savedStarSystem) {
-      try {
-        const system: StarSystem = JSON.parse(savedStarSystem);
-        setStarSystem(system);
+    try {
+      // Load world context to get starSystemId
+      const worldContextData = localStorage.getItem('worldContext');
+      if (worldContextData) {
+        const worldContext = JSON.parse(worldContextData);
+        setStarSystemId(worldContext.starSystemId);
+      }
+
+      // Load primary star to get stellar zones
+      const primaryStarData = localStorage.getItem('primaryStar');
+      if (primaryStarData) {
+        const primaryStar = JSON.parse(primaryStarData);
 
         // Get stellar zones from primary star
-        if (system.primaryStar?.stellarZones) {
-          setStellarZones(system.primaryStar.stellarZones);
+        if (primaryStar.stellarZones) {
+          setStellarZones(primaryStar.stellarZones);
         }
-      } catch (error) {
-        console.error('Failed to load star system:', error);
       }
+    } catch (error) {
+      console.error('Failed to load star system data:', error);
     }
   }, []);
 
@@ -103,10 +101,10 @@ export default function CreateCircumstellarDisks() {
 
   // Handle full disk generation
   const handleGenerateDisk = useCallback(() => {
-    if (!stellarZones || !starSystem) return;
+    if (!stellarZones || !starSystemId) return;
 
     const disk = generateDisk({
-      starSystemId: starSystem.id!,
+      starSystemId: starSystemId,
       stellarZones,
     });
 
@@ -120,21 +118,21 @@ export default function CreateCircumstellarDisks() {
     setOrbitPosition(disk.orbitPosition);
     setDiskName(disk.name);
 
-    const rolls = disk.diceRolls as any;
-    setMassRoll(rolls.massRoll);
-    setZoneRoll(rolls.zoneRoll);
-    setTypeRoll(rolls.typeRoll);
+    const rolls = disk.diceRolls;
+    setMassRoll(rolls?.massRoll ?? null);
+    setZoneRoll(rolls?.zoneRoll ?? null);
+    setTypeRoll(rolls?.typeRoll ?? null);
 
     setGeneratedDisk(disk);
     console.log('🌌 Generated complete disk:', disk);
-  }, [stellarZones, starSystem]);
+  }, [stellarZones, starSystemId]);
 
   // Calculate disk width from zone for manual mode
   const calculateManualDiskWidth = useCallback(
     (zone: DiskZone) => {
       if (!stellarZones) return;
 
-      let inner: number, outer: number, midpoint: number;
+      let inner: number, outer: number;
 
       switch (zone) {
         case DiskZone.INFERNAL:
@@ -172,7 +170,7 @@ export default function CreateCircumstellarDisks() {
           outer = 2;
       }
 
-      midpoint = (inner + outer) / 2;
+      const midpoint = (inner + outer) / 2;
       setDiskInnerRadius(parseFloat(inner.toFixed(2)));
       setDiskOuterRadius(parseFloat(outer.toFixed(2)));
       setOrbitPosition(parseFloat(midpoint.toFixed(2)));
@@ -180,13 +178,21 @@ export default function CreateCircumstellarDisks() {
     [stellarZones]
   );
 
+  // Initialize disk dimensions in manual mode when stellar zones become available
+  useEffect(() => {
+    if (generationMode === 'manual' && stellarZones) {
+      calculateManualDiskWidth(diskZone);
+    }
+  }, [stellarZones, calculateManualDiskWidth, diskZone, generationMode]);
+
   // Validate disk when properties change
   useEffect(() => {
-    if (!starSystem) return;
+    if (!starSystemId) return;
 
     const diskData: PlanetData = {
+      id: diskId,
       name: diskName,
-      starSystemId: starSystem.id!,
+      starSystemId: starSystemId,
       orbitPosition,
       planetType: PlanetType.CIRCUMSTELLAR_DISK,
       diskType,
@@ -209,6 +215,7 @@ export default function CreateCircumstellarDisks() {
     const validation = validateDiskData(diskData);
     setValidationErrors(validation.errors);
   }, [
+    diskId,
     diskName,
     diskType,
     diskZone,
@@ -220,18 +227,19 @@ export default function CreateCircumstellarDisks() {
     massRoll,
     zoneRoll,
     typeRoll,
-    starSystem,
+    starSystemId,
     generationMode,
   ]);
 
   // Handle save and navigation
   const handleNext = useCallback(async () => {
-    if (!starSystem || validationErrors.length > 0) return;
+    if (!starSystemId || validationErrors.length > 0) return;
 
     try {
       const diskData: PlanetData = {
+        id: diskId,
         name: diskName,
-        starSystemId: starSystem.id!,
+        starSystemId: starSystemId,
         orbitPosition,
         planetType: PlanetType.CIRCUMSTELLAR_DISK,
         diskType,
@@ -253,13 +261,14 @@ export default function CreateCircumstellarDisks() {
 
       await savePlanet(diskData);
       console.log('💾 Saved disk to database:', diskData);
-      navigate('/create-new/planetary-system');
+      navigate('../secondary-planets');
     } catch (error) {
       console.error('Failed to save disk:', error);
       setValidationErrors(['Failed to save disk to database']);
     }
   }, [
-    starSystem,
+    diskId,
+    starSystemId,
     diskName,
     diskType,
     diskZone,
@@ -276,7 +285,7 @@ export default function CreateCircumstellarDisks() {
     navigate,
   ]);
 
-  // Configure navigation
+  // Configure next button disabled state
   useEffect(() => {
     const isDiskComplete =
       diskName.trim() !== '' &&
@@ -284,9 +293,17 @@ export default function CreateCircumstellarDisks() {
       diskOuterRadius > 0 &&
       validationErrors.length === 0;
 
-    context.setNextDisabled(!isDiskComplete);
-    context.setNextHandler(() => handleNext);
-  }, [context, diskName, diskInnerRadius, diskOuterRadius, validationErrors, handleNext]);
+    if (context) {
+      context.setNextDisabled(!isDiskComplete);
+    }
+  }, [diskName, diskInnerRadius, diskOuterRadius, validationErrors, context]);
+
+  // Configure next button handler (separate effect to prevent infinite loop)
+  useEffect(() => {
+    if (context) {
+      context.setNextHandler(handleNext);
+    }
+  }, [handleNext, context]);
 
   // Keyboard shortcut
   useEffect(() => {
@@ -308,65 +325,74 @@ export default function CreateCircumstellarDisks() {
 
   return (
     <TooltipProvider>
-      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-2">
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight mb-2">
             Circumstellar Disks
           </h1>
-          <p className="text-muted-foreground">
-            Generate disks of gas, dust, and planetoids orbiting the star. Press{' '}
-            <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500">
-              D
-            </kbd>{' '}
-            to generate a disk procedurally.
+          <p className="text-sm sm:text-base text-muted-foreground">
+            Generate disks of gas, dust, and planetoids orbiting the star.{' '}
+            <span className="hidden sm:inline">
+              Press{' '}
+              <kbd className="px-2 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500">
+                D
+              </kbd>{' '}
+              to generate a disk procedurally.
+            </span>
           </p>
         </div>
 
         {/* Alert if no star system */}
-        {!starSystem && (
-          <Alert className="mb-6">
+        {!starSystemId && (
+          <Alert className="mb-4 sm:mb-6 p-4">
             <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
+            <AlertDescription className="text-xs sm:text-sm">
               No star system found. Please complete the star system setup first.
             </AlertDescription>
           </Alert>
         )}
 
         {/* Alert if incomplete */}
-        {starSystem && !isDiskComplete && !validationErrors.length && (
-          <Alert className="mb-6">
+        {starSystemId && !isDiskComplete && !validationErrors.length && (
+          <Alert className="mb-4 sm:mb-6 p-4">
             <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
+            <AlertDescription className="text-xs sm:text-sm">
               Generate or configure a circumstellar disk to proceed to the next step.
             </AlertDescription>
           </Alert>
         )}
 
-        {starSystem && (
-          <div className="space-y-6">
+        {starSystemId && (
+          <div className="space-y-4 sm:space-y-6">
             {/* Generation Mode Selection */}
-            <Card className="p-6">
+            <Card className="p-4 sm:p-6">
               <div className="space-y-4">
                 <div>
                   <Label className="text-base font-semibold mb-3 block">Generation Mode</Label>
                   <RadioGroup
                     value={generationMode}
                     onValueChange={(value) => {
-                      setGenerationMode(value as 'procedural' | 'manual');
+                      const newMode = value as 'procedural' | 'manual';
+                      setGenerationMode(newMode);
                       setGeneratedDisk(null);
+
+                      // Initialize manual mode with default values
+                      if (newMode === 'manual' && stellarZones) {
+                        calculateManualDiskWidth(diskZone);
+                      }
                     }}
-                    className="flex gap-6"
+                    className="flex flex-col sm:flex-row gap-4 sm:gap-6"
                   >
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-2 p-3 sm:p-0 border sm:border-0 rounded-lg sm:rounded-none">
                       <RadioGroupItem value="procedural" id="procedural" />
-                      <Label htmlFor="procedural" className="cursor-pointer">
+                      <Label htmlFor="procedural" className="cursor-pointer text-sm sm:text-base">
                         Procedural (2D6 Rolls)
                       </Label>
                     </div>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-2 p-3 sm:p-0 border sm:border-0 rounded-lg sm:rounded-none">
                       <RadioGroupItem value="manual" id="manual" />
-                      <Label htmlFor="manual" className="cursor-pointer">
+                      <Label htmlFor="manual" className="cursor-pointer text-sm sm:text-base">
                         Manual Configuration
                       </Label>
                     </div>
@@ -375,21 +401,21 @@ export default function CreateCircumstellarDisks() {
 
                 {/* Procedural Generation */}
                 {generationMode === 'procedural' && (
-                  <Card className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border-blue-200 dark:border-blue-900">
-                    <div className="flex items-center justify-between">
+                  <Card className="p-4 sm:p-6 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 border-blue-200 dark:border-blue-900">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                       <div className="flex-1">
-                        <h3 className="text-lg font-semibold mb-1 flex items-center gap-2">
-                          <Sparkles className="h-5 w-5 text-blue-600" />
+                        <h3 className="text-base sm:text-lg font-semibold mb-1 flex items-center gap-2">
+                          <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
                           Procedural Generation
                         </h3>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-xs sm:text-sm text-muted-foreground">
                           Generate a complete disk with all properties using 2D6 dice rolls.
                         </p>
                       </div>
                       <Button
                         onClick={handleGenerateDisk}
                         disabled={!stellarZones}
-                        className="ml-4"
+                        className="w-full sm:w-auto sm:ml-4"
                         size="lg"
                       >
                         <Disc className="h-4 w-4 mr-2" />
@@ -401,11 +427,11 @@ export default function CreateCircumstellarDisks() {
 
                 {/* Manual Configuration */}
                 {generationMode === 'manual' && (
-                  <Card className="p-6 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 border-purple-200 dark:border-purple-900">
+                  <Card className="p-4 sm:p-6 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 border-purple-200 dark:border-purple-900">
                     <div className="space-y-4">
                       <div>
-                        <h3 className="text-lg font-semibold mb-1">Manual Configuration</h3>
-                        <p className="text-sm text-muted-foreground mb-4">
+                        <h3 className="text-base sm:text-lg font-semibold mb-1">Manual Configuration</h3>
+                        <p className="text-xs sm:text-sm text-muted-foreground mb-4">
                           Configure disk properties manually.
                         </p>
                       </div>
@@ -515,32 +541,34 @@ export default function CreateCircumstellarDisks() {
             {/* Disk Results */}
             {(generatedDisk || generationMode === 'manual') && (
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <span>Disk Configuration</span>
+                <CardHeader className="p-4 sm:p-6">
+                  <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <span className="text-lg sm:text-xl">Disk Configuration</span>
                     <Badge
                       variant={generationMode === 'procedural' ? 'default' : 'secondary'}
+                      className="self-start sm:self-auto"
                     >
                       {generationMode === 'procedural' ? 'Procedural' : 'Manual'}
                     </Badge>
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
                   {/* Disk Name */}
                   <div>
-                    <Label className="font-medium mb-2 block">Disk Name</Label>
+                    <Label className="font-medium mb-2 block text-sm sm:text-base">Disk Name</Label>
                     <Input
                       value={diskName}
                       onChange={(e) => setDiskName(e.target.value)}
                       placeholder="Enter disk name"
+                      className="text-sm sm:text-base"
                     />
                   </div>
 
                   {/* Properties Grid */}
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <div>
-                      <Label className="text-sm text-muted-foreground">Type</Label>
-                      <div className="flex items-center gap-2 mt-1">
+                      <Label className="text-xs sm:text-sm text-muted-foreground">Type</Label>
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
                         <p className="text-sm font-medium">{getDiskTypeLabel(diskType)}</p>
                         {typeRoll && (
                           <Badge variant="outline" className="text-xs">
@@ -550,8 +578,8 @@ export default function CreateCircumstellarDisks() {
                       </div>
                     </div>
                     <div>
-                      <Label className="text-sm text-muted-foreground">Zone</Label>
-                      <div className="flex items-center gap-2 mt-1">
+                      <Label className="text-xs sm:text-sm text-muted-foreground">Zone</Label>
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
                         <p className="text-sm font-medium">{getDiskZoneLabel(diskZone)}</p>
                         {zoneRoll && (
                           <Badge variant="outline" className="text-xs">
@@ -561,8 +589,8 @@ export default function CreateCircumstellarDisks() {
                       </div>
                     </div>
                     <div>
-                      <Label className="text-sm text-muted-foreground">Mass</Label>
-                      <div className="flex items-center gap-2 mt-1">
+                      <Label className="text-xs sm:text-sm text-muted-foreground">Mass</Label>
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
                         <p className="text-sm font-medium">
                           {diskMass} {diskMassUnit}
                         </p>
@@ -574,17 +602,17 @@ export default function CreateCircumstellarDisks() {
                       </div>
                     </div>
                     <div>
-                      <Label className="text-sm text-muted-foreground">Width</Label>
+                      <Label className="text-xs sm:text-sm text-muted-foreground">Width</Label>
                       <p className="text-sm font-medium mt-1">
                         {(diskOuterRadius - diskInnerRadius).toFixed(2)} AU
                       </p>
                     </div>
                     <div>
-                      <Label className="text-sm text-muted-foreground">Inner Radius</Label>
+                      <Label className="text-xs sm:text-sm text-muted-foreground">Inner Radius</Label>
                       <p className="text-sm font-medium mt-1">{diskInnerRadius} AU</p>
                     </div>
                     <div>
-                      <Label className="text-sm text-muted-foreground">Outer Radius</Label>
+                      <Label className="text-xs sm:text-sm text-muted-foreground">Outer Radius</Label>
                       <p className="text-sm font-medium mt-1">{diskOuterRadius} AU</p>
                     </div>
                   </div>
@@ -606,10 +634,10 @@ export default function CreateCircumstellarDisks() {
 
             {/* Validation Errors */}
             {validationErrors.length > 0 && (
-              <Alert variant="destructive">
+              <Alert variant="destructive" className="p-4">
                 <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  <ul className="list-disc list-inside">
+                <AlertDescription className="text-xs sm:text-sm">
+                  <ul className="list-disc list-inside space-y-1">
                     {validationErrors.map((error, index) => (
                       <li key={index}>{error}</li>
                     ))}

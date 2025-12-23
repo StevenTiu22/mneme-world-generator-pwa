@@ -8,7 +8,7 @@ type CreationMode = "quick" | "custom";
 
 interface LayoutContext {
   setNextDisabled: (disabled: boolean) => void;
-  setNextHandler: (handler: () => () => void) => void;
+  setNextHandler: (handler: () => void) => void;
 }
 
 export function CreateNewPage() {
@@ -31,14 +31,15 @@ export function CreateNewPage() {
       // Enable/disable Next button
       context.setNextDisabled(!selection);
 
-      // Set Next button handler - wrap in a function to avoid immediate execution
-      context.setNextHandler(() => handleNext);
+      // Set Next button handler
+      context.setNextHandler(handleNext);
     }
-  }, [selection, handleNext, context]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selection, handleNext, context.setNextDisabled, context.setNextHandler]);
 
   return (
-    <div className="w-full max-w-4xl mx-auto animate-in fade-in duration-500">
-      <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-12 text-center md:text-left">
+    <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 animate-in fade-in duration-500">
+      <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold tracking-tight mb-8 sm:mb-12 text-center md:text-left">
         How do you want to create your world?
       </h1>
 

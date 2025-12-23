@@ -154,7 +154,7 @@ export function rollBasePresence(
       else target = 13; // Impossible for other classes
       break;
 
-    case BaseType.SCOUT:
+    case BaseType.SCOUT: {
       const scoutTargets: Record<string, number> = {
         'A': 7,
         'B': 8,
@@ -163,6 +163,7 @@ export function rollBasePresence(
       };
       target = scoutTargets[starportClass] || 13;
       break;
+    }
 
     case BaseType.PIRATE:
       if (['C', 'D', 'E'].includes(starportClass)) target = 12;
@@ -195,7 +196,7 @@ export function getBasePresenceTarget(
       if (starportClass === 'B') return 10;
       return null; // Not possible
 
-    case BaseType.SCOUT:
+    case BaseType.SCOUT: {
       const scoutTargets: Record<string, number> = {
         'A': 7,
         'B': 8,
@@ -203,6 +204,7 @@ export function getBasePresenceTarget(
         'D': 10,
       };
       return scoutTargets[starportClass] || null;
+    }
 
     case BaseType.PIRATE:
       if (['C', 'D', 'E'].includes(starportClass)) return 12;

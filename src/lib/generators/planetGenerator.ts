@@ -6,8 +6,9 @@
  */
 
 import { roll2D6, type DiceRollResult } from '@/lib/dice';
-import { PlanetType, BeltDensity, type PlanetData } from '@/models/world/planet';
+import { PlanetType, BeltDensity, type PlanetData, type PlanetDiceRolls } from '@/models/world/planet';
 import { GenerationMethod } from '@/models/common/types';
+import { generatePlanetId } from '@/lib/db/queries/planetQueries';
 
 // =====================
 // 2D6 Tables
@@ -252,7 +253,7 @@ export function generatePlanet(options: GeneratePlanetOptions): PlanetData {
   let mass: number | undefined;
   let beltWidth: number | undefined;
   let density: BeltDensity | undefined;
-  const diceRolls: any = { typeRoll: typeResult.total };
+  const diceRolls: Partial<PlanetDiceRolls> = { typeRoll: typeResult.total };
 
   // Type-specific generation
   if (planetType === PlanetType.GAS_GIANT) {
@@ -279,6 +280,7 @@ export function generatePlanet(options: GeneratePlanetOptions): PlanetData {
   const name = planetName || generatePlanetName(orbitPosition, planetType);
 
   return {
+    id: generatePlanetId(),
     name,
     starSystemId,
     orbitPosition,

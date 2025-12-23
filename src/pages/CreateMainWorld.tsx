@@ -31,6 +31,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { generateWorld } from "@/lib/generators/worldGenerator";
+import { generateWorldId } from "@/lib/db/queries/worldQueries";
 import {
   WorldType as WorldTypeEnum,
   type WorldDiceRolls,
@@ -364,17 +365,17 @@ export function CreateMainWorld() {
     return true;
   }, [selectedType, worldSize, gravity, lesserEarthType]);
 
-  const handleSaveName = () => {
+  const handleSaveName = useCallback(() => {
     if (tempName.trim()) {
       setWorldName(tempName.trim());
       setIsEditingName(false);
     }
-  };
+  }, [tempName]);
 
-  const handleCancelEdit = () => {
+  const handleCancelEdit = useCallback(() => {
     setTempName(worldName);
     setIsEditingName(false);
-  };
+  }, [worldName]);
 
   const handleEditClick = () => {
     setTempName(worldName);
@@ -472,8 +473,8 @@ export function CreateMainWorld() {
       gravity: gravity,
       lesserEarthType: lesserEarthType,
       techLevel: techLevel,
-      worldId: worldId || undefined,
-      generationMethod: generationMethod || undefined,
+      worldId: worldId || generateWorldId(),
+      generationMethod: generationMethod || 'custom',
       diceRolls: diceRolls,
     };
     localStorage.setItem("mainWorld", JSON.stringify(data));
@@ -532,6 +533,7 @@ export function CreateMainWorld() {
     };
 
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Auto-save (only after initial load is complete)
@@ -540,6 +542,15 @@ export function CreateMainWorld() {
       saveData();
     }
   }, [saveData, isLoaded]);
+
+  // Ensure worldId exists (generate if missing)
+  useEffect(() => {
+    if (isLoaded && !worldId) {
+      const newWorldId = generateWorldId();
+      setWorldId(newWorldId);
+      console.log("✅ Generated new worldId:", newWorldId);
+    }
+  }, [isLoaded, worldId]);
 
   // Handler for Next button
   const handleNext = useCallback(() => {
@@ -551,7 +562,7 @@ export function CreateMainWorld() {
   useEffect(() => {
     if (context) {
       context.setNextDisabled(!isFormComplete);
-      context.setNextHandler(() => handleNext);
+      context.setNextHandler(handleNext);
     }
   }, [isFormComplete, handleNext, context]);
 
@@ -570,7 +581,7 @@ export function CreateMainWorld() {
 
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [isEditingName, worldName]);
+  }, [isEditingName, worldName, handleCancelEdit, handleRandom, handleSaveName]);
 
   return (
     <TooltipProvider>
@@ -656,10 +667,10 @@ export function CreateMainWorld() {
         )}
 
         {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
           {/* Left Column: World Type Selection */}
           <div>
-            <Label className="text-base font-semibold mb-4 flex items-center gap-2">
+            <Label className="text-sm sm:text-base font-semibold mb-4 flex items-center gap-2">
               World Type *
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -674,14 +685,14 @@ export function CreateMainWorld() {
                 </TooltipContent>
               </Tooltip>
             </Label>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Card
                     role="button"
                     onClick={() => handleTypeSelect("habitat")}
                     className={cn(
-                      "h-40 cursor-pointer transition-all hover:border-primary/50 relative",
+                      "h-32 sm:h-40 cursor-pointer transition-all hover:border-primary/50 relative",
                       selectedType === "habitat" &&
                         "border-primary border-2 bg-primary/5"
                     )}
@@ -710,7 +721,7 @@ export function CreateMainWorld() {
                     role="button"
                     onClick={() => handleTypeSelect("terrestrial")}
                     className={cn(
-                      "h-40 cursor-pointer transition-all hover:border-primary/50 relative",
+                      "h-32 sm:h-40 cursor-pointer transition-all hover:border-primary/50 relative",
                       selectedType === "terrestrial" &&
                         "border-primary border-2 bg-primary/5"
                     )}
@@ -739,7 +750,7 @@ export function CreateMainWorld() {
                     role="button"
                     onClick={() => handleTypeSelect("dwarf")}
                     className={cn(
-                      "h-40 cursor-pointer transition-all hover:border-primary/50 relative",
+                      "h-32 sm:h-40 cursor-pointer transition-all hover:border-primary/50 relative",
                       selectedType === "dwarf" &&
                         "border-primary border-2 bg-primary/5"
                     )}
@@ -767,7 +778,7 @@ export function CreateMainWorld() {
                   <Card
                     role="button"
                     onClick={handleRandom}
-                    className="h-40 cursor-pointer transition-all hover:border-primary/50 hover:border-primary/70 relative"
+                    className="h-32 sm:h-40 cursor-pointer transition-all hover:border-primary/50 hover:border-primary/70 relative"
                   >
                     <CardContent className="h-full flex flex-col items-center justify-center p-6">
                       <Shuffle className="h-8 w-8 mb-2" />

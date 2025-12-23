@@ -15,9 +15,6 @@ import {
 import type { StellarZones } from '@/models/stellar/types/interface';
 import { GenerationMethod } from '@/models/common/types';
 import {
-  DISK_MASS_TABLE,
-  DISK_ZONE_TABLE,
-  DISK_TYPE_TABLE,
   getDiskMassFromRoll,
   getDiskZoneFromRoll,
   getDiskTypeFromRoll,
@@ -296,7 +293,7 @@ export function validateDiskData(diskData: PlanetData): {
 
   // Dice rolls validation (if present)
   if (diskData.diceRolls) {
-    const rolls = diskData.diceRolls as any;
+    const rolls = diskData.diceRolls;
 
     if (rolls.massRoll && (rolls.massRoll < 2 || rolls.massRoll > 12)) {
       errors.push('Mass roll must be between 2 and 12');

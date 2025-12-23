@@ -1,7 +1,8 @@
 import { Link, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { cn } from "@/lib/utils";
 
 // Better type for the context
 export interface CenteredLayoutContext {
@@ -81,24 +82,24 @@ const ROUTE_CONFIG: Record<string, RouteConfig> = {
     showPrevious: true,
     showNext: true,
     previousPath: "/create-new/position",
-    nextPath: "/create-new/secondary-planets",
-  },
-  "/create-new/secondary-planets": {
-    showPrevious: true,
-    showNext: true,
-    previousPath: "/create-new/moons",
     nextPath: "/create-new/circumstellar-disks",
   },
   "/create-new/circumstellar-disks": {
     showPrevious: true,
     showNext: true,
-    previousPath: "/create-new/secondary-planets",
+    previousPath: "/create-new/moons",
+    nextPath: "/create-new/secondary-planets",
+  },
+  "/create-new/secondary-planets": {
+    showPrevious: true,
+    showNext: true,
+    previousPath: "/create-new/circumstellar-disks",
     nextPath: "/create-new/planetary-system",
   },
   "/create-new/planetary-system": {
     showPrevious: true,
     showNext: false,
-    previousPath: "/create-new/circumstellar-disks",
+    previousPath: "/create-new/secondary-planets",
   },
 };
 
@@ -106,10 +107,23 @@ export function CenteredLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const [nextDisabled, setNextDisabled] = useState(true);
-  const [nextHandler, setNextHandler] = useState<() => void>(() => () => {});
-  const [finishHandler, setFinishHandler] = useState<() => void>(
+  const [nextHandler, setNextHandlerState] = useState<() => void>(() => () => {});
+  const [finishHandler, setFinishHandlerState] = useState<() => void>(
     () => () => {}
   );
+
+  // Wrap setters to avoid React's updater function behavior
+  // When passing a function to setState, React calls it as (prevState) => newState
+  // We need to wrap it to force React to use the function as the actual value
+  // Using useCallback to prevent recreation on every render
+  const setNextHandler = useCallback((handler: () => void) => {
+    setNextHandlerState(() => handler);
+  }, []);
+
+  const setFinishHandler = useCallback((handler: () => void) => {
+    setFinishHandlerState(() => handler);
+  }, []);
+
   const [showButtons, setShowButtons] = useState(false);
 
   const navConfig: RouteConfig = ROUTE_CONFIG[location.pathname] || {
@@ -199,7 +213,7 @@ export function CenteredLayout() {
     <div className="relative min-h-screen bg-background">
       {/* Sticky Back to Home link */}
       <div className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
-        <div className="container flex h-16 items-center px-8">
+        <div className="container flex h-16 items-center px-4 sm:px-6 lg:px-8">
           <Link
             to="/"
             className="inline-flex items-center text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
@@ -211,7 +225,7 @@ export function CenteredLayout() {
       </div>
 
       {/* Main content area with centered content */}
-      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 pb-32">
+      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-2 sm:p-4 pb-24 md:pb-32">
         <div className="w-full">
           <Outlet
             context={{ setNextDisabled, setNextHandler, setFinishHandler }}
@@ -219,26 +233,28 @@ export function CenteredLayout() {
         </div>
       </div>
 
-      {/* Fixed navigation buttons at bottom right - always visible on mobile, scroll-to-show on desktop */}
+      {/* Fixed navigation buttons - mobile: bottom-center stacked, desktop: bottom-right horizontal */}
       {(navConfig.showPrevious ||
         navConfig.showNext ||
         navConfig.showFinish) && (
         <div
-          className={`fixed bottom-8 right-8 z-40 flex gap-4 transition-all duration-300
-            ${
-              // On mobile (< md): always visible
-              // On desktop (>= md): only visible when scrolled to bottom
-              showButtons
-                ? "opacity-100 translate-y-0"
-                : "opacity-100 translate-y-0 md:opacity-0 md:translate-y-4 md:pointer-events-none"
-            }`}
+          className={cn(
+            "fixed z-40 transition-all duration-300",
+            "left-1/2 -translate-x-1/2 bottom-4 flex flex-col gap-2 w-[calc(100%-2rem)]",
+            "md:left-auto md:translate-x-0 md:right-8 md:bottom-8 md:flex-row md:gap-4 md:w-auto",
+            // On mobile (< md): always visible
+            // On desktop (>= md): only visible when scrolled to bottom
+            showButtons
+              ? "opacity-100 translate-y-0"
+              : "opacity-100 translate-y-0 md:opacity-0 md:translate-y-4 md:pointer-events-none"
+          )}
         >
           {navConfig.showPrevious && (
             <Button
               variant="outline"
               size="lg"
               onClick={handlePrevious}
-              className="gap-2 shadow-lg"
+              className="gap-2 shadow-lg w-full md:w-auto"
             >
               <ArrowLeft className="h-4 w-4" />
               Previous
@@ -250,7 +266,7 @@ export function CenteredLayout() {
               size="lg"
               disabled={nextDisabled}
               onClick={handleNext}
-              className="gap-2 shadow-lg"
+              className="gap-2 shadow-lg w-full md:w-auto"
             >
               Next
               <ArrowRight className="h-4 w-4" />
@@ -260,7 +276,7 @@ export function CenteredLayout() {
             <Button
               size="lg"
               onClick={handleFinish}
-              className="gap-2 shadow-lg"
+              className="gap-2 shadow-lg w-full md:w-auto"
             >
               <Check className="h-4 w-4" />
               Finish & Save

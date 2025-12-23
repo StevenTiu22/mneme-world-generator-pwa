@@ -5,11 +5,12 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { getStellarProperty } from "@/lib/db/queries/stellarQueries";
 import { generateStarId, generateSystemId } from "@/lib/db/queries/starQueries";
 import { generateStarName } from "@/lib/generators/primaryStarGenerator";
+import { calculateStellarZones } from "@/lib/stellar/zoneCalculations";
 import type {
   StellarClass as StellarClassType,
   StellarGrade,
 } from "@/models/stellar/types/enums";
-import type { StarData } from "@/models/stellar/types/interface";
+import type { StarData, StellarZones } from "@/models/stellar/types/interface";
 import { GenerationMethod } from "@/models/common/types";
 
 // Import sub-components
@@ -34,9 +35,10 @@ interface PrimaryStarData {
   grade: number;
 }
 
-// Extended interface for localStorage with starSystemId
+// Extended interface for localStorage with starSystemId and stellar zones
 interface PrimaryStarStorage extends StarData {
   starSystemId: string;
+  stellarZones?: StellarZones;
 }
 
 export function CreatePrimaryStar() {
@@ -102,6 +104,13 @@ export function CreatePrimaryStar() {
   // Save data to localStorage
   const saveData = useCallback(() => {
     const now = new Date().toISOString();
+
+    // Calculate stellar zones from luminosity
+    let stellarZones: StellarZones | undefined;
+    if (stellarProperty?.luminosity) {
+      stellarZones = calculateStellarZones(stellarProperty.luminosity);
+    }
+
     const fullStarData: PrimaryStarStorage = {
       id: starId,
       name: starName,
@@ -112,6 +121,7 @@ export function CreatePrimaryStar() {
       updatedAt: now,
       createdBy: "user",
       starSystemId: starSystemId,
+      stellarZones: stellarZones,
     };
     localStorage.setItem("primaryStar", JSON.stringify(fullStarData));
   }, [
@@ -122,6 +132,7 @@ export function CreatePrimaryStar() {
     classGrade,
     generationMethod,
     createdAt,
+    stellarProperty,
   ]);
 
   // Load data from localStorage on mount
@@ -170,7 +181,7 @@ export function CreatePrimaryStar() {
   useEffect(() => {
     if (context) {
       context.setNextDisabled(false);
-      context.setNextHandler(() => handleNext);
+      context.setNextHandler(handleNext);
     }
   }, [handleNext, context]);
 

@@ -174,5 +174,6 @@ export function StarClassSelector({
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export { STAR_CLASSES };
 export type { StarClass };

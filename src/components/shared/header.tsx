@@ -15,19 +15,21 @@ export function Header() {
   const { theme, setTheme } = useTheme();
 
   return (
-    <header className="w-full py-8 px-24">
+    <header className="w-full py-4 md:py-8 px-4 md:px-8 lg:px-24">
       <NavigationMenu className="w-full max-w-none h-fit sticky">
-        <div className="flex items-center justify-between w-full px-4">
-          <Link to="/" className="flex items-center gap-2">
+        <div className="flex items-center justify-between w-full px-0 md:px-4 gap-2">
+          <Link to="/" className="flex items-center gap-2 min-w-0">
             <img
               src={logo}
               alt="Mneme Logo"
-              className="h-10 w-10 rounded-lg object-cover"
+              className="h-8 w-8 md:h-10 md:w-10 rounded-lg object-cover flex-shrink-0"
             />
-            <span className="font-semibold text-lg">Mneme World Generator</span>
+            <span className="font-semibold text-sm md:text-lg truncate">
+              Mneme<span className="hidden sm:inline"> World Generator</span>
+            </span>
           </Link>
-          <NavigationMenuList className="flex items-center gap-6">
-            <NavigationMenuItem>
+          <NavigationMenuList className="flex items-center gap-2 md:gap-6">
+            <NavigationMenuItem className="hidden md:block">
               <NavigationMenuLink
                 asChild
                 className={navigationMenuTriggerStyle()}
@@ -40,7 +42,9 @@ export function Header() {
                 asChild
                 className={navigationMenuTriggerStyle()}
               >
-                <NavLink to="/create-new">Create New</NavLink>
+                <NavLink to="/create-new" className="text-xs md:text-sm">
+                  Create New
+                </NavLink>
               </NavigationMenuLink>
             </NavigationMenuItem>
             <NavigationMenuItem>
@@ -48,16 +52,19 @@ export function Header() {
                 asChild
                 className={navigationMenuTriggerStyle()}
               >
-                <NavLink to="/my-worlds">My Worlds</NavLink>
+                <NavLink to="/my-worlds" className="text-xs md:text-sm">
+                  My Worlds
+                </NavLink>
               </NavigationMenuLink>
             </NavigationMenuItem>
           </NavigationMenuList>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center flex-shrink-0">
             <Button
               variant="outline"
               size="icon"
               aria-label="Toggle Theme"
+              className="h-9 w-9 md:h-10 md:w-10"
               onClick={() => setTheme(theme === "light" ? "dark" : "light")}
             >
               {theme === "light" ? (

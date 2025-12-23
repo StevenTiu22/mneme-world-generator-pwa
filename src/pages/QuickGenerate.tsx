@@ -1,12 +1,22 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Loader2, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { generatePrimaryStar } from "@/lib/generators/primaryStarGenerator";
 import { generateCompanionStars } from "@/lib/generators/companionStarGenerator";
 import { generateWorld } from "@/lib/generators/worldGenerator";
 import { generateCulture } from "@/lib/generators/cultureGenerator";
 import { generateStarport } from "@/lib/generators/starportGenerator";
+import { generateMoon } from "@/lib/generators/moonGenerator";
+import { generateDisk } from "@/lib/generators/diskGenerator";
+import { generatePlanet } from "@/lib/generators/planetGenerator";
+import { saveMoons } from "@/lib/db/queries/moonQueries";
+import { savePlanets } from "@/lib/db/queries/planetQueries";
+import { saveWorld } from "@/lib/db/queries/worldQueries";
+import { saveStarSystem, generateSystemId } from "@/lib/db/queries/starQueries";
+import { calculateStellarZonesFromClassGrade } from "@/lib/stellar/zoneCalculations";
 import type { StellarClass, StellarGrade } from "@/models/stellar/types/enums";
+import type { MoonData } from "@/models/world/moon";
+import type { PlanetData } from "@/models/world/planet";
 
 export function QuickGenerate() {
   const [status, setStatus] = useState("Initializing generation...");
@@ -18,7 +28,7 @@ export function QuickGenerate() {
       try {
         // Step 1: Generate primary star
         setStatus("🎲 Rolling for primary star...");
-        setProgress(20);
+        setProgress(15);
         await new Promise((resolve) => setTimeout(resolve, 500)); // Brief delay for UX
 
         const primaryStar = await generatePrimaryStar();
@@ -27,7 +37,7 @@ export function QuickGenerate() {
 
         // Step 2: Generate companion stars
         setStatus("🌟 Rolling for companion stars...");
-        setProgress(50);
+        setProgress(30);
         await new Promise((resolve) => setTimeout(resolve, 500));
 
         const companionResult = await generateCompanionStars(
@@ -68,7 +78,7 @@ export function QuickGenerate() {
 
         // Step 3: Set default world context
         setStatus("🌍 Setting world context...");
-        setProgress(60);
+        setProgress(40);
         await new Promise((resolve) => setTimeout(resolve, 300));
 
         const worldContext = {
@@ -80,7 +90,7 @@ export function QuickGenerate() {
 
         // Step 4: Generate main world
         setStatus("🪐 Rolling for main world...");
-        setProgress(70);
+        setProgress(50);
         await new Promise((resolve) => setTimeout(resolve, 500));
 
         const generatedWorld = generateWorld({
@@ -115,7 +125,7 @@ export function QuickGenerate() {
 
         // Step 5: Generate and save culture data
         setStatus("🎭 Rolling for cultural traits...");
-        setProgress(75);
+        setProgress(55);
         await new Promise((resolve) => setTimeout(resolve, 300));
 
         const cultureData = generateCulture({ worldId: generatedWorld.id });
@@ -128,47 +138,33 @@ export function QuickGenerate() {
 
         // Step 6: Save habitability data from generated world
         setStatus("🌡️ Setting habitability parameters...");
-        setProgress(80);
+        setProgress(60);
         await new Promise((resolve) => setTimeout(resolve, 300));
 
-        // Map generated values to habitability page format
-        const temperatureMap: Record<string, number> = {
-          inferno: 10,
-          hot: 30,
-          average: 50,
-          cold: 70,
-          freezing: 90,
-        };
-        const temperatureValue =
-          temperatureMap[
-            generatedWorld.temperature?.toLowerCase() || "average"
-          ] || 50;
-
-        const hazardIntensityMap: Record<number, number> = {
-          1: 10,
-          2: 30,
-          3: 50,
-          4: 70,
-          5: 90,
-        };
-        const hazardIntensityValue =
-          hazardIntensityMap[generatedWorld.hazardIntensity || 0] || 50;
-
+        // Map generated values to CreateHabitability page format
         const habitabilityData = {
-          atmosphericPressure:
-            generatedWorld.atmosphericPressure?.toLowerCase() || "average",
-          temperature: temperatureValue,
+          atmosphere:
+            generatedWorld.atmosphericPressure?.toLowerCase() || "standard",
+          temperature:
+            generatedWorld.temperature?.toLowerCase() || "temperate",
           hazardType: generatedWorld.hazardType?.toLowerCase() || "none",
-          hazardIntensity: hazardIntensityValue,
+          hazardIntensity: generatedWorld.hazardIntensity?.toString() || "",
           biochemicalResources:
             generatedWorld.biochemicalResources?.toLowerCase() || "abundant",
+
+          // Store modifiers
+          atmosphereModifier: 0, // Will be calculated by CreateHabitability
+          temperatureModifier: 0,
+          hazardTypeModifier: 0,
+          hazardIntensityModifier: 0,
+          biochemicalResourcesModifier: 0,
         };
         localStorage.setItem("habitability", JSON.stringify(habitabilityData));
         console.log("✅ Habitability set");
 
         // Step 7: Save inhabitants data from generated world
         setStatus("👥 Rolling for inhabitants...");
-        setProgress(85);
+        setProgress(65);
         await new Promise((resolve) => setTimeout(resolve, 300));
 
         // Map wealth number to inhabitants page format
@@ -242,7 +238,7 @@ export function QuickGenerate() {
 
         // Step 8: Generate and save starport data
         setStatus("🚀 Rolling for starport...");
-        setProgress(90);
+        setProgress(70);
         await new Promise((resolve) => setTimeout(resolve, 300));
 
         const starportData = generateStarport({
@@ -263,7 +259,7 @@ export function QuickGenerate() {
 
         // Step 9: Set default position (habitable zone)
         setStatus("🎯 Setting orbital position...");
-        setProgress(95);
+        setProgress(75);
         await new Promise((resolve) => setTimeout(resolve, 300));
 
         const positionData = {
@@ -273,12 +269,205 @@ export function QuickGenerate() {
         localStorage.setItem("position", JSON.stringify(positionData));
         console.log("✅ Position set");
 
-        // Step 10: Complete
+        // Step 10: Save to Database
+        setStatus("💾 Saving to database...");
+        setProgress(80);
+        await new Promise((resolve) => setTimeout(resolve, 500));
+
+        try {
+          // Create star system object
+          const starSystemId = generateSystemId();
+          const now = new Date().toISOString();
+
+          // Add required StarData properties to companions
+          const companionStarsWithTimestamps = companionResult.companions.map(comp => ({
+            ...comp,
+            createdAt: now,
+            updatedAt: now,
+            createdBy: 'quick-generate',
+          }));
+
+          const starSystem = {
+            id: starSystemId,
+            name: primaryStar.name,
+            primaryStar: primaryStar,
+            companionStars: companionStarsWithTimestamps,
+            createdAt: now,
+            updatedAt: now,
+            createdBy: 'quick-generate',
+          };
+
+          // Save star system to database
+          await saveStarSystem(starSystem);
+          console.log("✅ Star system saved to database:", starSystemId);
+
+          // Save main world to database
+          const worldToSave = {
+            ...generatedWorld,
+            starSystemId: starSystemId,
+          };
+          const savedWorld = await saveWorld(worldToSave);
+          console.log("✅ Main world saved to database:", savedWorld.id);
+
+          // Store IDs for next steps
+          localStorage.setItem('quickGen_starSystemId', starSystemId);
+          localStorage.setItem('quickGen_worldId', savedWorld.id || generatedWorld.id);
+        } catch (error) {
+          console.error('❌ Error saving to database:', error);
+          // Continue anyway - localStorage data is still available
+        }
+
+        // Step 11: Generate Moons
+        setStatus("🌙 Generating moons...");
+        setProgress(85);
+        await new Promise((resolve) => setTimeout(resolve, 500));
+
+        try {
+          const starSystemId = localStorage.getItem('quickGen_starSystemId');
+          const worldId = localStorage.getItem('quickGen_worldId');
+
+          if (starSystemId && worldId) {
+            const generatedMoons: MoonData[] = [];
+            const defaultMoonCount = 2; // Default: 2 moons (configurable in review)
+
+            for (let i = 0; i < defaultMoonCount; i++) {
+              const moon = generateMoon({
+                worldId,
+                starSystemId,
+                orbitPosition: i + 1,
+                advantage: 0,
+                disadvantage: 0,
+              });
+              generatedMoons.push(moon);
+            }
+
+            // Save all moons to database
+            if (generatedMoons.length > 0) {
+              await saveMoons(generatedMoons);
+              console.log(`✅ Generated ${generatedMoons.length} moon(s) (user can add/remove in review)`);
+            }
+
+            // Store moon count for potential UI display
+            localStorage.setItem('quickGen_moonCount', String(defaultMoonCount));
+          }
+        } catch (error) {
+          console.error('❌ Error generating moons:', error);
+          // Continue anyway
+        }
+
+        // Step 12: Generate Circumstellar Disks
+        setStatus("💿 Generating circumstellar disks...");
+        setProgress(90);
+        await new Promise((resolve) => setTimeout(resolve, 500));
+
+        try {
+          const starSystemId = localStorage.getItem('quickGen_starSystemId');
+
+          if (starSystemId) {
+            // Calculate stellar zones for the primary star
+            const stellarZones = await calculateStellarZonesFromClassGrade(
+              primaryStar.stellarClass as StellarClass,
+              primaryStar.stellarGrade as StellarGrade
+            );
+
+            if (stellarZones) {
+              const generatedDisks: PlanetData[] = [];
+
+              // Determine disk count: 1D6 (1-3 = 1 disk, 4-6 = 2 disks)
+              const roll = Math.floor(Math.random() * 6) + 1;
+              const diskCount = roll <= 3 ? 1 : 2;
+
+              for (let i = 0; i < diskCount; i++) {
+                // generateDisk() uses 2D6 internally for:
+                // - Zone (Habitable zones most likely: 52.8%)
+                // - Type (Protoplanetary 58.3%, Accretion 41.7%)
+                // - Mass (distributed via 2D6 bell curve)
+                const disk = generateDisk({
+                  starSystemId,
+                  stellarZones,
+                  advantage: 0,
+                  disadvantage: 0,
+                });
+                generatedDisks.push(disk);
+              }
+
+              // Save all disks to database
+              if (generatedDisks.length > 0) {
+                await savePlanets(generatedDisks);
+                console.log(`✅ Generated ${generatedDisks.length} disk(s)`);
+              }
+            }
+          }
+        } catch (error) {
+          console.error('❌ Error generating disks:', error);
+          // Continue anyway
+        }
+
+        // Step 13: Generate Secondary Planets
+        setStatus("🪐 Generating secondary planets...");
+        setProgress(95);
+        await new Promise((resolve) => setTimeout(resolve, 500));
+
+        try {
+          const starSystemId = localStorage.getItem('quickGen_starSystemId');
+          const worldPosition = positionData.selectedHex?.q || 3; // Primary world orbit (default to 3)
+
+          if (starSystemId) {
+            const generatedPlanets: PlanetData[] = [];
+
+            // Determine planet count: 1D6 + 2 = 3-8 planets
+            const planetCount = Math.floor(Math.random() * 6) + 1 + 2;
+
+            // Get available orbits (exclude primary world orbit)
+            const maxOrbits = 10;
+            const availableOrbits = [];
+            for (let i = 1; i <= maxOrbits; i++) {
+              if (i !== worldPosition) {
+                availableOrbits.push(i);
+              }
+            }
+
+            // Shuffle and take first planetCount orbits
+            const shuffled = availableOrbits.sort(() => Math.random() - 0.5);
+            const selectedOrbits = shuffled.slice(0, Math.min(planetCount, availableOrbits.length));
+
+            for (const orbit of selectedOrbits) {
+              // generatePlanet() uses 2D6 internally for:
+              // - Type: Gas Giant 67%, Ice Giant 25%, Belts 8%
+              // - Size: Varies by type (also 2D6-based)
+              // - Density: For belts (also 2D6-based)
+              const planet = generatePlanet({
+                starSystemId,
+                orbitPosition: orbit,
+                advantage: 0,
+                disadvantage: 0,
+              });
+              generatedPlanets.push(planet);
+            }
+
+            // Save all planets to database
+            if (generatedPlanets.length > 0) {
+              await savePlanets(generatedPlanets);
+              console.log(`✅ Generated ${generatedPlanets.length} secondary planet(s)`);
+            }
+          }
+        } catch (error) {
+          console.error('❌ Error generating planets:', error);
+          // Continue anyway
+        }
+
+        // Step 14: Complete
         setStatus("✨ Generation complete!");
         setProgress(100);
         await new Promise((resolve) => setTimeout(resolve, 500));
 
+        // Clean up temporary localStorage IDs (but keep wizard data for review)
+        localStorage.removeItem('quickGen_starSystemId');
+        localStorage.removeItem('quickGen_worldId');
+        localStorage.removeItem('quickGen_moonCount');
+
         // Navigate to primary star page for review
+        // This allows users to review and modify all generated data
         console.log("🚀 Navigating to wizard for review...");
         navigate("/create-new/primary-star");
       } catch (error) {
@@ -298,10 +487,9 @@ export function QuickGenerate() {
   return (
     <div className="w-full max-w-2xl mx-auto">
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8">
-        {/* Icon and Spinner */}
-        <div className="relative">
-          <Sparkles className="h-20 w-20 text-primary absolute -top-2 -left-2 animate-pulse" />
-          <Loader2 className="h-16 w-16 animate-spin text-primary" />
+        {/* Star Icon */}
+        <div className="flex items-center justify-center">
+          <Sparkles className="h-20 w-20 text-primary animate-pulse" />
         </div>
 
         {/* Status Text */}
